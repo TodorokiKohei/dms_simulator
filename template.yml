@@ -1,0 +1,46 @@
+Systems:
+  type: kafka
+  Broker:
+    zookeeper:
+        nodes:
+          - 10.20.22.158
+          - 10.20.22.159
+          - 10.20.22.160
+    kafka:
+      nodes:
+        - 10.20.22.158
+        - 10.20.22.159
+        - 10.20.22.160
+      cofings:
+        topics:
+          - "partition-3-1:3:1"
+  Publisher:
+    pub1:
+      nodes:
+        - 10.20.22.157
+      configs:
+        number: 1
+        topic: "partition-3-1"
+        messeage_size: 1k
+        batch_size: 5
+        duration: 5m
+  Subscriber:
+    sub1:
+      nodes:
+        - 10.20.22.161
+      configs:
+        number: 1
+        topic: "partition-3-1"
+        duration: 5m
+
+Actions:
+  delay1:
+    type: delay
+    time: 100ms
+    source:
+      - 10.20.22.158
+    dest:
+      - 10.20.22.159
+      - 10.20.22.160
+    start: 1m
+    duration: 1m
