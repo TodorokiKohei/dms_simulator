@@ -1,0 +1,86 @@
+version: "3.4"
+
+services:
+  zookeeper:
+    hostname: zookeeper
+    image: confluentinc/cp-zookeeper:5.5.5
+    volumes:
+      - /tmp/zookeeper/log:/var/lib/zookeeper/log
+        a
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks: 
+      - kafka-cluster
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - "node.labels.broker==1"
+
+  kafka1:
+    hostname: kafka1
+    image: confluentinc/cp-kafka:5.5.5
+    depends_on:
+      - zookeeper
+    ports:
+      - target: 9092
+        published: 9092
+        protocol: tcp
+        mode: host
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka1:29092,OUTSIDE://10.20.22.160:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    networks: 
+      - kafka-cluster
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - "node.labels.broker==1"
+
+  kafka2:
+    hostname: kafka2
+    image: confluentinc/cp-kafka:5.5.5
+    depends_on:
+      - zookeeper
+    ports:
+      - target: 9092
+        published: 9092
+        protocol: tcp
+        mode: host
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka2:29092,OUTSIDE://10.20.22.161:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    networks: 
+      - kafka-cluster
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - "node.labels.broker==2"
+
+  kafkaapp:
+    hostname: kafkaapp
+    image: kafkaapp
+    networks:
+      - kafka-cluster
+    tty: true
+    stdin_open: true
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - "node.labels.type==manager"
+
+networks:
+  kafka-cluster:
+    external: true

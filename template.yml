@@ -1,19 +1,25 @@
 Base:
   User: todoroki
   Password: $PWASSWD
-  Key: $KEYFILE
+  Keyfile: $KEYFILE
   Nodes:
     publisher-1:
+      hostname: publisher-1
       address: 10.20.22.158
     subscriber-1:
+      hostname: subscriber-1
       address: 10.20.22.159
     broker-1:
+      hostname: broker-1
       address: 10.20.22.160
     broker-2:
+      hostname: broker-2
       address: 10.20.22.161
     broker-3:
+      hostname: broker-1
       address: 10.20.22.162
     manager:
+      hostname: manager
       address: 10.20.22.163
       is_manager: true
 
@@ -24,27 +30,31 @@ Systems:
       containers:
         zoo-1:
           node: broker-1
-
+          configs:
+            environment:
+              ZOOKEEPER_CLIENT_PORT: 2181
+              ZOOKEEPER_TICK_TIME: 2000
     kafka:
       containers:
         kafka-1:
           node: broker-1
-          environment:
-            - KAFKA_BROKER_ID: 1
+          configs:
+            environment:
+              KAFKA_BROKER_ID: 1
               KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
               KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka-1:9092
-              KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
         kafka-2:
           node: broker-2
-          environment:
-            - KAFKA_BROKER_ID: 2
+          configs:
+            environment:
+              KAFKA_BROKER_ID: 2
               KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
               KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka-2:9092
-              KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
         kafka-3:
           node: broker-3
-          environment:
-            - KAFKA_BROKER_ID: 3
+          configs:
+            environment:
+              KAFKA_BROKER_ID: 3
               KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka-3:9092
       share_configs:
         environment:
