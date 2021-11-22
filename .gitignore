@@ -1,3 +1,4 @@
 .vscode
 init_config.sh
 *__pycache__*
+venv

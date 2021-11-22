@@ -1,12 +1,16 @@
-version: "3.4"
+version: "3.8"
 
 services:
   zookeeper:
     hostname: zookeeper
-    image: confluentinc/cp-zookeeper:5.5.5
+    image: confluentinc/cp-zookeeper:5.5.6
     volumes:
-      - /tmp/zookeeper/log:/var/lib/zookeeper/log
-        a
+      - type: bind
+        source: /tmp/zoo-1/log
+        target: /var/lib/zookeeper/log
+      - type: bind
+        source: /tmp/zoo-1/data
+        target: /var/lib/zookeeper/data
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -16,11 +20,11 @@ services:
       mode: global
       placement:
         constraints:
-          - "node.labels.broker==1"
+          - "node.hostname==broker-1"
 
   kafka1:
     hostname: kafka1
-    image: confluentinc/cp-kafka:5.5.5
+    image: confluentinc/cp-kafka:5.5.6
     depends_on:
       - zookeeper
     ports:
@@ -28,6 +32,10 @@ services:
         published: 9092
         protocol: tcp
         mode: host
+    # volumes:
+    #   - type: bind
+    #     source: /tmp/kafka-1/data
+    #     target: /var/lib/kafka/data
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -41,11 +49,11 @@ services:
       mode: global
       placement:
         constraints:
-          - "node.labels.broker==1"
+          - "node.hostname==broker-1"
 
   kafka2:
     hostname: kafka2
-    image: confluentinc/cp-kafka:5.5.5
+    image: confluentinc/cp-kafka:5.5.6
     depends_on:
       - zookeeper
     ports:
@@ -53,6 +61,8 @@ services:
         published: 9092
         protocol: tcp
         mode: host
+    # volumes:
+    #   - /tmp/kafka-2/data:/var/lib/kafka/data
     environment:
       KAFKA_BROKER_ID: 2
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -66,20 +76,34 @@ services:
       mode: global
       placement:
         constraints:
-          - "node.labels.broker==2"
+          - "node.hostname==broker-2"
 
-  kafkaapp:
-    hostname: kafkaapp
-    image: kafkaapp
-    networks:
+  kafka3:
+    hostname: kafka3
+    image: confluentinc/cp-kafka:5.5.6
+    depends_on:
+      - zookeeper
+    ports:
+      - target: 9092
+        published: 9092
+        protocol: tcp
+        mode: host
+    # volumes:
+    #   - /tmp/kafka-3/data:/var/lib/kafka/data        
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka3:29092,OUTSIDE://10.20.22.162:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    networks: 
       - kafka-cluster
-    tty: true
-    stdin_open: true
     deploy:
       mode: global
       placement:
         constraints:
-          - "node.labels.type==manager"
+          - "node.hostname==broker-3"
 
 networks:
   kafka-cluster:

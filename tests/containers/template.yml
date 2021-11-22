@@ -1,5 +1,6 @@
 Base:
   User: todoroki
+  Password: $PWASSWD
   Keyfile: $KEYFILE
   Nodes:
     publisher-1:
