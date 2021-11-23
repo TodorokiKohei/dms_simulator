@@ -1,24 +1,19 @@
 Base:
   User: todoroki
   Keyfile: $KEYFILE
+  Sudopass: $SUDOPASS
   Nodes:
     publisher-1:
-      hostname: publisher-1
       address: 10.20.22.158
     subscriber-1:
-      hostname: subscriber-1
       address: 10.20.22.159
     broker-1:
-      hostname: broker-1
       address: 10.20.22.160
     broker-2:
-      hostname: broker-2
       address: 10.20.22.161
     broker-3:
-      hostname: broker-1
       address: 10.20.22.162
     manager:
-      hostname: manager
       address: 10.20.22.163
       is_manager: true
 
@@ -66,18 +61,18 @@ Systems:
     containers:
       pub-1:
         node: publisher-1
-        args:
-          number: 3
-          topic: "partition-3-1"
-          messeage_size: 1k
-          batch_size: 5
+        broker: kafka-1:9092,kafka-2:9092,kafka-3:9092
+        number: 3
+        topic: "partition-3-1"
+        messeage_size: 1k
+        batch_size: 5
   Subscriber:
     containers:
       pub-1:
         node: suscriber-1
-        args:
-          number: 1
-          topic: "partition-3-1"
+        broker: kafka-1:9092,kafka-2:9092,kafka-3:9092
+        number: 1
+        topic: "partition-3-1"
   duration: 5m
 
 Actions:

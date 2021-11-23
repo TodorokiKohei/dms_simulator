@@ -13,7 +13,18 @@ class DmsSimulator():
         self.controller = controller
 
     def run(self):
-        self.controller.deploy_broker()
+        # 初期設定
+        print('############### Initializing ############################')
+        self.controller.init()        
+
+        # コンテナ展開
+        # print('############### Deploying ############################')
+        # self.controller.deploy_broker()
+
+        # 
+        print('############### Cleaning ############################')
+        self.controller.remove()
+        self.controller.clean()
 
 
 if __name__ == "__main__":
@@ -27,15 +38,19 @@ if __name__ == "__main__":
         keyfile = os.environ.get(template['Base']['Keyfile'][1:])
     else:
         keyfile = template['Base']['Keyfile']
+    if template['Base']['Sudopass'][0] == '$':
+        sudopass = os.environ.get(template['Base']['Sudopass'][1:])
+    else:
+        sudopass = template['Base']['Sudopass']
     for name, configs in template['Base']['Nodes'].items():
-        node = Node(name, user, keyfile, **configs)
+        node = Node(name, user, keyfile, sudopass, **configs)
         node_manager.append(node)
 
     # コントローラー作成
-    home_dir = 'output'
-    executer = SwarmExecuter(home_dir)
+    executer = SwarmExecuter(home_dir='exec_dir', remote_dir='/tmp/exec_dir')
     if template["Systems"]["type"] == 'kafka':
-        controller = KafkaController(node_manager, executer, template['Systems'])
+        controller = KafkaController(
+            node_manager, executer, template['Systems'])
 
     # シミュレーション実行
     ds = DmsSimulator(controller)

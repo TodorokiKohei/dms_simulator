@@ -1,7 +1,5 @@
 from abc import ABCMeta, abstractclassmethod
 
-from yaml.events import NodeEvent
-
 
 class Container(metaclass=ABCMeta):
     def __init__(self, name, node, ports=None, volumes=None, environment=None, networks=None,
