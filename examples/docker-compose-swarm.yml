@@ -32,10 +32,10 @@ services:
         published: 9092
         protocol: tcp
         mode: host
-    # volumes:
-    #   - type: bind
-    #     source: /tmp/kafka-1/data
-    #     target: /var/lib/kafka/data
+    volumes:
+      - type: bind
+        source: /tmp/kafka-1/data
+        target: /var/lib/kafka/data
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -61,8 +61,10 @@ services:
         published: 9092
         protocol: tcp
         mode: host
-    # volumes:
-    #   - /tmp/kafka-2/data:/var/lib/kafka/data
+    volumes:
+      - type: bind
+        source: /tmp/kafka-2/data
+        target: /var/lib/kafka/data
     environment:
       KAFKA_BROKER_ID: 2
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -88,8 +90,10 @@ services:
         published: 9092
         protocol: tcp
         mode: host
-    # volumes:
-    #   - /tmp/kafka-3/data:/var/lib/kafka/data        
+    volumes:
+      - type: bind
+        source: /tmp/kafka-3/data
+        target: /var/lib/kafka/data  
     environment:
       KAFKA_BROKER_ID: 3
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181

@@ -25,11 +25,11 @@ class Node:
         self._client = paramiko.SSHClient()
         self._client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-    def init(self):
+    def configure_hostname(self):
         # ホスト名設定
         stdin, stdout, stdrr = self.ssh_exec('hostname')
         self.hostname = stdout.readline().replace('\n', '')
-        # print(self.hostname)
+        print(f"Node {self.name} is configured with a host name of {self.hostname}")
 
     @connect
     def ssh_exec(self, cmd):
@@ -45,8 +45,7 @@ class Node:
             time.sleep(0.1)
             cnt += 0.1
             if cnt == 5:
-                print(f"Failur {cmd}")
-                raise Exception
+                raise RuntimeError(f"Failur {cmd}")
         stdin.channel.send(self.sudopass + "\n")
         stdin.flush()
         stdout.channel.recv_exit_status()

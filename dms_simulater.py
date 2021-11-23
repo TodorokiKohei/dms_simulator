@@ -3,7 +3,7 @@ import os
 
 import yaml
 
-from libs.controllers import KafkaController
+from libs.kafka import KafkaController
 from libs.executers import SwarmExecuter
 from libs.utils import Node, NodeManager
 
@@ -15,15 +15,14 @@ class DmsSimulator():
     def run(self):
         # 初期設定
         print('############### Initializing ############################')
-        self.controller.init()        
+        self.controller.initialize()
 
         # コンテナ展開
-        # print('############### Deploying ############################')
-        # self.controller.deploy_broker()
+        print('############### Deploying ############################')
+        self.controller.deploy_broker()
 
-        # 
+        # 環境をきれいにする
         print('############### Cleaning ############################')
-        self.controller.remove()
         self.controller.clean()
 
 

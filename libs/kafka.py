@@ -1,38 +1,42 @@
-import os
-from abc import ABCMeta, abstractclassmethod, abstractmethod
-
-from libs.containers import KafkaContainer, ZookeeperContainer
+from libs.base.containers import Container
+from libs.base.controllers import Controller
 
 
-class Controller(metaclass=ABCMeta):
-    def __init__(self, node_manager, executer):
-        self._node_manager = node_manager
-        self._executre = executer
+class ZookeeperContainer(Container):
+    def __init__(self, name, configs):
+        super().__init__(name, **configs)
+        self.image = "confluentinc/cp-zookeeper:5.5.6"
+        if self.volumes is None:
+            self.volumes = [
+                {
+                    'type': 'bind',
+                    'source': f'/tmp/{self.name}/log',
+                    'target': '/var/lib/zookeeper/log'
+                },
+                {
+                    'type': 'bind',
+                    'source': f'/tmp/{self.name}/data',
+                    'target': '/var/lib/zookeeper/data'
+                }
+            ]
+        if self.networks is None:
+            self.networks = ['kafka-network']
 
-        self._containers = []
-        self._broker = []
-        self._publisher = []
-        self._subscriber = []
 
-    @abstractmethod
-    def init(self):
-        pass
-
-    @abstractmethod
-    def clean(self):
-        pass
-
-    @abstractclassmethod
-    def deploy_broker(self):
-        pass
-
-    @abstractclassmethod
-    def deploy_publisher(self):
-        pass
-
-    @abstractclassmethod
-    def deploy_subscriber(self):
-        pass
+class KafkaContainer(Container):
+    def __init__(self, name, configs):
+        super().__init__(name, **configs)
+        self.image = "confluentinc/cp-kafka:5.5.6"
+        if self.volumes is None:
+            self.volumes = [
+                {
+                    'type': 'bind',
+                    'source': f'/tmp/{self.name}/data',
+                    'target': '/var/lib/kafka/data'
+                },
+            ]
+        if self.networks is None:
+            self.networks = ['kafka-network']
 
 
 class KafkaController(Controller):
@@ -60,17 +64,21 @@ class KafkaController(Controller):
                     'replication-factor': replication_factor
                 })
 
-    def init(self):
+    def initialize(self):
         for node in self._node_manager.get_nodes():
-            node.init()
+            node.configure_hostname()
         self._executre.init(self._containers, self._node_manager)
 
     def clean(self):
+        print(f"remove kafka-broker")
+        self._executre.down_containers(
+            self._broker, self._node_manager, 'kafka-broker')
         self._executre.clean(self._containers, self._node_manager)
 
     def deploy_broker(self):
         # brokerコンテナを展開
         print('------------Deploy broker containers------------')
+        print(f"create kafka-broker")
         self._executre.up_containers(
             self._broker, self._node_manager, 'kafka-broker')
 
@@ -81,7 +89,3 @@ class KafkaController(Controller):
     def deploy_subscriber(self):
         print('------------Deploy subscriber containers------------')
         pass
-
-    def remove(self):
-        self._executre.down_containers(
-            self._broker, self._node_manager, 'kafka-broker')
