@@ -6,9 +6,11 @@ def connect(func):
     def exec(self, *args, **kwargs):
         self._client.connect(self.address, username=self.user,
                              key_filename=self.keyfile, timeout=5)
-        result = func(self, *args, **kwargs)
+        res, err = func(self, *args, **kwargs)
+        print(res)
+        print(err)
         self._client.close()
-        return result
+        return (res, err)
     return exec
 
 
@@ -27,18 +29,19 @@ class Node:
 
     def configure_hostname(self):
         # ホスト名設定
-        stdin, stdout, stdrr = self.ssh_exec('hostname')
-        self.hostname = stdout.readline().replace('\n', '')
-        print(f"[{self.name}]: hostname")
+        res, err = self.ssh_exec('hostname')
+        self.hostname = res[0].replace('\n', '')
 
     @connect
     def ssh_exec(self, cmd):
+        print(f'[{self.name}]: {cmd}')
         stdin, stdout, stderr = self._client.exec_command(cmd)
         stdout.channel.recv_exit_status()
-        return (stdin, stdout, stderr)
+        return (stdout.readlines(), stderr.readlines())
 
     @connect
     def ssh_exec_sudo(self, cmd):
+        print(f'[{self.name}]: {cmd}')
         stdin, stdout, stderr = self._client.exec_command(cmd, get_pty=True)
         cnt = 0
         while len(stdout.channel.in_buffer) == 0:
@@ -49,17 +52,21 @@ class Node:
         stdin.channel.send(self.sudopass + "\n")
         stdin.flush()
         stdout.channel.recv_exit_status()
-        return (stdin, stdout, stderr)
+        return (stdout.readlines(), stderr.readlines())
 
     @connect
     def scp_put(self, local, remote):
+        print(f'[{self.name}]: scp {local} {remote}')
         with self._client.open_sftp() as sftp:
             sftp.put(local, remote)
+        return ("", "")
 
     @connect
     def scp_get(self, remote, local):
+        print(f'[{self.name}]: scp {remote} {local}')
         with self._client.open_sftp() as sftp:
             sftp.get(remote, local)
+        return ("", "")
 
     def match_name(self, name):
         return self.name == name

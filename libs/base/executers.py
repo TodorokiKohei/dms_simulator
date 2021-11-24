@@ -38,7 +38,6 @@ class Executer(AbstractExecuter):
         if container.volumes is None:
             return
         for vol in container.volumes:
-            print(f'[{node.name}]: mkdir -p {vol["source"]}')
             node.ssh_exec(f'mkdir -p {vol["source"]}')
 
 
@@ -50,5 +49,4 @@ class Executer(AbstractExecuter):
         if container.volumes is None:
             return
         for vol in container.volumes:
-            print(f'[{node.name}]: sudo rm -rf {vol["source"]}')
             node.ssh_exec_sudo(f'sudo rm -rf {vol["source"]}')
