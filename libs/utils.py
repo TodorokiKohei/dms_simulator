@@ -29,7 +29,7 @@ class Node:
         # ホスト名設定
         stdin, stdout, stdrr = self.ssh_exec('hostname')
         self.hostname = stdout.readline().replace('\n', '')
-        print(f"Node {self.name} is configured with a host name of {self.hostname}")
+        print(f"[{self.name}]: hostname")
 
     @connect
     def ssh_exec(self, cmd):

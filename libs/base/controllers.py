@@ -32,3 +32,4 @@ class Controller(metaclass=ABCMeta):
         self._broker = []
         self._publisher = []
         self._subscriber = []
+        

@@ -10,17 +10,35 @@ class SwarmExecuter(Executer):
         super().__init__(home_dir, remote_dir)
         self._compose_dir = os.path.join(self._home_dir, 'compose-files')
 
-    def init(self, containers, node_manager):
-        super().init(containers, node_manager)
+    def initialize(self, containers, node_manager):
+        super().initialize(containers, node_manager)
+        
+        # マネージャーノードにコンテナ展開用のディレクトリを作成
+        manager = node_manager.get_manager()
+        manager.ssh_exec(f'mkdir -p {self._remote_dir}')
+        os.makedirs(self._compose_dir, exist_ok=True)
+
+        # 管理しているノードのホスト名をSSHで取得し設定
+        for node in node_manager.get_nodes():
+            node.configure_hostname()
+
+        # コンテナを展開するノードのホスト名を設定
+        for container in containers:
+            node = node_manager.get_match_node(container.node_name)
+            container.node_hostname = node.hostname
 
         # swarmの初期化
         # worker追加
+
+        # ネットワークの作成
 
     def clean(self, containers, node_manager):
         super().clean(containers, node_manager)
 
         # ノードの除外
         # swarmの削除
+
+        # ネットワークの削除
 
     def up_containers(self, containers, node_manager, service):
         # swarmで展開するためのcomposeファイルを作成

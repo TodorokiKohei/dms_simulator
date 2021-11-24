@@ -23,14 +23,14 @@ Systems:
     zookeeper:
       containers:
         zoo-1:
-          node: broker-1
+          node_name: broker-1
           environment:
             ZOOKEEPER_CLIENT_PORT: 2181
             ZOOKEEPER_TICK_TIME: 2000
     kafka:
       containers:
         kafka-1:
-          node: broker-1
+          node_name: broker-1
           environment:
             KAFKA_BROKER_ID: 1
             KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
@@ -39,7 +39,7 @@ Systems:
             KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
             KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
         kafka-2:
-          node: broker-2
+          node_name: broker-2
           environment:
             KAFKA_BROKER_ID: 2
             KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
@@ -48,7 +48,7 @@ Systems:
             KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
             KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
         kafka-3:
-          node: broker-3
+          node_name: broker-3
           environment:
             KAFKA_BROKER_ID: 3
             KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka-3:9092

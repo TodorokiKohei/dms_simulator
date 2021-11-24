@@ -65,11 +65,12 @@ class KafkaController(Controller):
                 })
 
     def initialize(self):
-        for node in self._node_manager.get_nodes():
-            node.configure_hostname()
-        self._executre.init(self._containers, self._node_manager)
+        # 実行クラスの初期化
+        self._executre.initialize(self._containers, self._node_manager)
 
     def clean(self):
+        # 実行クラスの
+        self._executre.clean(self._containers, self._node_manager)
         print(f"remove kafka-broker")
         self._executre.down_containers(
             self._broker, self._node_manager, 'kafka-broker')
