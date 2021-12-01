@@ -8,28 +8,16 @@ class SwarmExecuter(Executer):
 
     def __init__(self, home_dir, remote_dir):
         super().__init__(home_dir, remote_dir)
+
         self._compose_dir = os.path.join(self._home_dir, 'compose-files')
-
-    def initialize(self, containers, node_manager):
-        super().initialize(containers, node_manager)
-        manager = node_manager.get_manager()
-
-        # マネージャーノードにコンテナ展開用のディレクトリを作成
-        manager.ssh_exec(f'mkdir -p {self._remote_dir}')
         os.makedirs(self._compose_dir, exist_ok=True)
 
-        # # 管理しているノードのホスト名をSSHで取得し設定
-        for node in node_manager.get_nodes():
-            node.configure_hostname()
+    def create_remote_dir(self, containers, node_manager):
+        # マネージャーノードにコンテナ展開用のディレクトリを作成
+        manager = node_manager.get_manager()
+        manager.ssh_exec(f'mkdir -p {self._remote_dir}')
 
-        # コンテナを展開するノードのホスト名を設定
-        for container in containers:
-            node = node_manager.get_match_node(container.node_name)
-            container.node_hostname = node.hostname
-        
-        self._create_swarm_cluster(containers, node_manager)
-
-    def _create_swarm_cluster(self, containers, node_manager):
+    def create_cluster(self, containers, node_manager):
         manager = node_manager.get_manager()
 
         # swarmの初期化
@@ -50,12 +38,7 @@ class SwarmExecuter(Executer):
         for network in networks:
             manager.ssh_exec(f'docker network create -d overlay {network}')
 
-
-    def clean(self, containers, node_manager):
-        super().clean(containers, node_manager)
-        self._del_swarm_cluster(containers, node_manager)
-
-    def _del_swarm_cluster(self, containers, node_manager):
+    def delete_cluster(self, containers, node_manager):
         manager = node_manager.get_manager()
 
         # workerをクラスターから除外
@@ -68,7 +51,10 @@ class SwarmExecuter(Executer):
         # ネットワークの削除
         networks = set()
         for container in containers:
-            networks.add(container.networks)
+            if container.networks is None:
+                continue
+            for network in container.networks:
+                networks.add(network)
         for network in networks:
             manager.ssh_exec(f'docker network rm {network}')
 

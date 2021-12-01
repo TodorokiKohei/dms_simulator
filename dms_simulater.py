@@ -43,7 +43,7 @@ if __name__ == "__main__":
         sudopass = os.environ.get(template['Base']['Sudopass'][1:])
     else:
         sudopass = template['Base']['Sudopass']
-        
+
     for name, configs in template['Base']['Nodes'].items():
         node = Node(name, user, keyfile, sudopass, **configs)
         node_manager.append(node)

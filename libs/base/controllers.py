@@ -32,4 +32,14 @@ class Controller(metaclass=ABCMeta):
         self._broker = []
         self._publisher = []
         self._subscriber = []
-        
+
+    def initialize(self):
+        for container in self._containers:
+            container.create_volume_dir()
+        self._executre.create_remote_dir(self._containers, self._node_manager)
+        self._executre.create_cluster(self._containers, self._node_manager)
+
+    def clean(self):
+        for container in self._containers:
+            container.delete_volume_dir()
+        self._executre.delete_cluster(self._containers, self._node_manager)

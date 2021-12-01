@@ -22,15 +22,18 @@ class Node:
         self.sudopass = sudopass
         self.address = address
         self.is_manager = is_manager
-        self.hostname = None
+        self._hostname = None
 
         self._client = paramiko.SSHClient()
         self._client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-    def configure_hostname(self):
-        # ホスト名設定
+    @property
+    def hostname(self):
+        if self._hostname is not None:
+            return self._hostname
         res, err = self.ssh_exec('hostname')
-        self.hostname = res[0].replace('\n', '')
+        self._hostname = res[0].replace('\n', '')
+        return self._hostname
 
     @connect
     def ssh_exec(self, cmd):

@@ -19,7 +19,20 @@ class Container(AbstractContainer):
         self.networks = networks
         self.command = command
 
-        self.node_hostname = None
+        self.node = None
+        self.inner_ip = None
+
+    def create_volume_dir(self):
+        if self.volumes is None:
+            return
+        for vol in self.volumes:
+            self.node.ssh_exec(f'mkdir -p {vol["source"]}')
+
+    def delete_volume_dir(self):
+        if self.volumes is None:
+            return
+        for vol in self.volumes:
+            self.node.ssh_exec_sudo(f'sudo rm -rf {vol["source"]}')
 
     def to_swarm(self):
         swarm = {
@@ -39,6 +52,6 @@ class Container(AbstractContainer):
         swarm['deploy'] = {
             'mode': 'global',
             'placement':
-                {'constraints': [f'node.hostname=={self.node_hostname}']}
+                {'constraints': [f'node.hostname=={self.node.hostname}']}
         }
         return {self.name: swarm}

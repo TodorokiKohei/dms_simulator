@@ -52,6 +52,11 @@ class KafkaController(Controller):
             self._broker.append(KafkaContainer(name, configs))
         self._containers.extend(self._broker)
 
+        # コンテナを展開するノードを設定
+        for container in self._containers:
+            node = self._node_manager.get_match_node(container.node_name)
+            container.node = node
+
         # 作成するトピックの情報を作成
         if 'topics' in systems['Broker']:
             self._topics = []
@@ -64,16 +69,11 @@ class KafkaController(Controller):
                     'replication-factor': replication_factor
                 })
 
-    def initialize(self):
-        # 実行クラスの初期化
-        self._executre.initialize(self._containers, self._node_manager)
-
     def clean(self):
-        # 実行クラスの掃除
         print(f"remove kafka-broker")
         self._executre.down_containers(
             self._broker, self._node_manager, 'kafka-broker')
-        self._executre.clean(self._containers, self._node_manager)
+        super().clean()
 
     def deploy_broker(self):
         # brokerコンテナを展開
@@ -84,8 +84,7 @@ class KafkaController(Controller):
 
     def deploy_publisher(self):
         print('------------Deploy publisher containers------------')
-        pass
+        
 
     def deploy_subscriber(self):
         print('------------Deploy subscriber containers------------')
-        pass
