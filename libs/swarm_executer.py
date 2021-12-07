@@ -1,18 +1,21 @@
 import os
+from typing import Container
 from libs.base.executers import Executer
 
 import yaml
 
+from libs.utils import NodeManager
+
 
 class SwarmExecuter(Executer):
 
-    def __init__(self, home_dir, remote_dir):
+    def __init__(self, home_dir, remote_dir, debug_mode=False):
         super().__init__(home_dir, remote_dir)
-
         self._compose_dir = os.path.join(self._home_dir, 'compose-files')
         os.makedirs(self._compose_dir, exist_ok=True)
+        self._debug_mode = debug_mode
 
-    def create_remote_dir(self, containers, node_manager):
+    def create_remote_dir(self, containers: list, node_manager: NodeManager):
         # マネージャーノードにコンテナ展開用のディレクトリを作成
         manager = node_manager.get_manager()
         manager.ssh_exec(f'mkdir -p {self._remote_dir}')
@@ -38,7 +41,7 @@ class SwarmExecuter(Executer):
         for network in networks:
             manager.ssh_exec(f'docker network create -d overlay {network}')
 
-    def delete_cluster(self, containers, node_manager):
+    def delete_cluster(self, containers: list, node_manager: NodeManager):
         manager = node_manager.get_manager()
 
         # workerをクラスターから除外
@@ -48,20 +51,11 @@ class SwarmExecuter(Executer):
         # swarmの削除
         manager.ssh_exec('docker swarm leave -f')
 
-        # ネットワークの削除
-        networks = set()
-        for container in containers:
-            if container.networks is None:
-                continue
-            for network in container.networks:
-                networks.add(network)
-        for network in networks:
-            manager.ssh_exec(f'docker network rm {network}')
-
-    def up_containers(self, containers, node_manager, service):
+    def up_containers(self, containers: list, node_manager: NodeManager, service: str):
         # swarmで展開するためのcomposeファイルを作成
         swarm = {}
         for container in containers:
+            container.pre_up_process()
             swarm.update(container.to_swarm())
         compose = {
             'version': '3.8',
@@ -81,7 +75,9 @@ class SwarmExecuter(Executer):
         manager = node_manager.get_manager()
         remote_compose_file = os.path.join(
             self._remote_dir, f'docker-compose-{service}.yml')
-        manager.scp_put(compose_file, remote_compose_file)
+        manager.sftp_put(compose_file, remote_compose_file)
+        if self._debug_mode:
+            return
         manager.ssh_exec(
             f'docker stack deploy -c {remote_compose_file} {service}')
 
@@ -89,3 +85,4 @@ class SwarmExecuter(Executer):
         # managerノードで展開したコンテナを削除する
         manager = node_manager.get_manager()
         manager.ssh_exec(f'docker stack rm {service}')
+            

@@ -3,3 +3,4 @@ init_config.sh
 *__pycache__*
 venv
 output
+exec_dir

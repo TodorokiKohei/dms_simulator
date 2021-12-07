@@ -3,13 +3,31 @@ from abc import ABCMeta, abstractclassmethod
 
 class AbstractContainer(metaclass=ABCMeta):
     @abstractclassmethod
+    def create_volume_dir(self):
+        pass
+
+    @abstractclassmethod
+    def delete_volume_dir(self):
+        pass
+
+    @abstractclassmethod
     def to_swarm(self):
+        """
+        コンテナの属性からswarmで起動するための情報を作成する
+        """
+        pass
+
+    @abstractclassmethod
+    def pre_up_process(self):
+        """
+        コンテナ起動前の処理（設定ファイルのアップロード等）を記述する
+        """
         pass
 
 
 class Container(AbstractContainer):
     def __init__(self, name, node_name=None, ports=None, volumes=None, environment=None, networks=None,
-                 command=None):
+                 command=None, **kwargs):
         self.image = None
         self.name = name
         self.node_name = node_name
@@ -19,6 +37,7 @@ class Container(AbstractContainer):
         self.networks = networks
         self.command = command
 
+        self.home_dir = None
         self.node = None
         self.inner_ip = None
 
@@ -32,6 +51,8 @@ class Container(AbstractContainer):
         if self.volumes is None:
             return
         for vol in self.volumes:
+            if vol['source'] == '/':
+                continue
             self.node.ssh_exec_sudo(f'sudo rm -rf {vol["source"]}')
 
     def to_swarm(self):

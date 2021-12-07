@@ -60,20 +60,33 @@ Systems:
   Publisher:
     containers:
       pub-1:
-        node: publisher-1
-        broker: kafka-1:9092,kafka-2:9092,kafka-3:9092
-        number: 3
-        topic: "partition-3-1"
-        messeage_size: 1k
-        batch_size: 5
+        node_name: publisher-1
+        environment:
+          TZ: Asia/Tokyo
+        params:
+          duration: 3m
+          number: 1
+          message_size: 1k
+          brokers: 
+            - kafka-1:9092
+            - kafka-2:9092
+            - kafka-3:9092
+          topic: "partition-3-1"
+
   Subscriber:
     containers:
-      pub-1:
-        node: suscriber-1
-        broker: kafka-1:9092,kafka-2:9092,kafka-3:9092
-        number: 1
-        topic: "partition-3-1"
-  duration: 5m
+      sub-1:
+        node_name: subscriber-1
+        environment:
+          TZ: Asia/Tokyo
+        params:
+          duration: 3m
+          number: 1
+          brokers: 
+            - kafka-1:9092
+            - kafka-2:9092
+            - kafka-3:9092
+          topic: "partition-3-1"
 
 Actions:
   delay1:

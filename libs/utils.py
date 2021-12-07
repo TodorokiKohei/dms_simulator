@@ -31,7 +31,7 @@ class Node:
     def hostname(self):
         if self._hostname is not None:
             return self._hostname
-        res, err = self.ssh_exec('hostname')
+        res, _ = self.ssh_exec('hostname')
         self._hostname = res[0].replace('\n', '')
         return self._hostname
 
@@ -58,15 +58,15 @@ class Node:
         return (stdout.readlines(), stderr.readlines())
 
     @connect
-    def scp_put(self, local, remote):
-        print(f'[{self.name}]: scp {local} {remote}')
+    def sftp_put(self, local, remote):
+        print(f'[{self.name}]: sftp {local} {remote}')
         with self._client.open_sftp() as sftp:
             sftp.put(local, remote)
         return ("", "")
 
     @connect
-    def scp_get(self, remote, local):
-        print(f'[{self.name}]: scp {remote} {local}')
+    def sftp_get(self, remote, local):
+        print(f'[{self.name}]: sftp {remote} {local}')
         with self._client.open_sftp() as sftp:
             sftp.get(remote, local)
         return ("", "")
