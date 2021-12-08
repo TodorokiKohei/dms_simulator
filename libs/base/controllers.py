@@ -28,10 +28,11 @@ class AbstrctController(metaclass=ABCMeta):
 
 
 class Controller(metaclass=ABCMeta):
-    def __init__(self, node_manager: NodeManager, executer: Executer, systems: dict, home_dir: str):
+    def __init__(self, node_manager: NodeManager, executer: Executer, systems: dict, root_dir: str):
         self._node_manager = node_manager
         self._executre = executer
-        self._home_dir = home_dir
+        self._home_dir = os.path.join(root_dir, 'controller')
+        self._result_dir = os.path.join(root_dir, 'results')
 
         self._containers = []
         self._broker = []

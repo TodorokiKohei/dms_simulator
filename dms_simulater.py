@@ -63,11 +63,11 @@ if __name__ == "__main__":
         node_manager.append(node)
 
     # ノード情報とコンテナ情報を持つコントローラーを作成
-    home_dir = 'exec_dir'
-    executer = SwarmExecuter(home_dir=os.path.join(home_dir, 'executer'), remote_dir='/tmp/exec_dir', debug_mode=args.debug)
+    root_dir = 'exec_dir'
+    executer = SwarmExecuter(home_dir=os.path.join(root_dir, 'executer'), remote_dir='/tmp/exec_dir', debug_mode=args.debug)
     if template["Systems"]["type"] == 'kafka':
         controller = KafkaController(
-            node_manager, executer, template['Systems'], os.path.join(home_dir, 'controller'))
+            node_manager, executer, template['Systems'], root_dir)
     controller.init_container()
 
     # シミュレーションにコントローラーを設定し実行する

@@ -32,6 +32,10 @@ class ZookeeperContainer(Container):
         # 事前処理無し
         pass
 
+    def collect_results(self):
+        # 収集処理無し
+        pass
+
 
 class KafkaContainer(Container):
     def __init__(self, name: str, configs: dict):
@@ -50,6 +54,10 @@ class KafkaContainer(Container):
 
     def pre_up_process(self):
         # 事前処理無し
+        pass
+
+    def collect_results(self):
+        # 収集処理無し
         pass
 
 
@@ -145,8 +153,8 @@ class KafkaSubContainer(KafkaClientContainer):
 
 
 class KafkaController(Controller):
-    def __init__(self, node_manager: NodeManager, executer: Executer, systems: dict, home_dir: str):
-        super().__init__(node_manager, executer, systems, home_dir)
+    def __init__(self, node_manager: NodeManager, executer: Executer, systems: dict, root_dir: str):
+        super().__init__(node_manager, executer, systems, root_dir)
 
         # Brokerのコンテナ情報の作成
         zoo_info = systems['Broker']['zookeeper']

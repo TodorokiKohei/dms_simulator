@@ -24,6 +24,13 @@ class AbstractContainer(metaclass=ABCMeta):
         """
         pass
 
+    @abstractclassmethod
+    def collect_results(self):
+        """
+        コンテナのログや実行結果を収集する処理を記述する
+        """
+        pass
+
 
 class Container(AbstractContainer):
     def __init__(self, name, node_name=None, ports=None, volumes=None, environment=None, networks=None,
