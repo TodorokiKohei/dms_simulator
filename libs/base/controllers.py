@@ -26,6 +26,18 @@ class AbstrctController(metaclass=ABCMeta):
     def deploy_subscriber(self):
         pass
 
+    @abstractclassmethod
+    def check_broker(self):
+        pass
+
+    @abstractclassmethod
+    def check_publisher():
+        pass
+
+    @abstractclassmethod
+    def check_subscriber():
+        pass
+
 
 class Controller(metaclass=ABCMeta):
     def __init__(self, node_manager: NodeManager, executer: Executer, systems: dict, root_dir: str):
