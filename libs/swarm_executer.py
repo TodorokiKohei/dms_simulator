@@ -1,9 +1,8 @@
 import os
-from typing import Container
-from libs.base.executers import Executer
 
 import yaml
 
+from libs.base.executers import Executer
 from libs.utils import NodeManager
 
 
@@ -81,8 +80,37 @@ class SwarmExecuter(Executer):
         manager.ssh_exec(
             f'docker stack deploy -c {remote_compose_file} {service}')
 
-    def down_containers(self, containers, node_manager, service):
+    def down_containers(self, containers: list, node_manager: NodeManager, service: str):
         # managerノードで展開したコンテナを削除する
         manager = node_manager.get_manager()
         manager.ssh_exec(f'docker stack rm {service}')
-            
+
+    def check(self, containers: list, node_mangaer: NodeManager, service: str):
+        # コンテナが展開されているかを確認する
+        manager = node_mangaer.get_manager()
+        serivce_info_all, _ = manager.ssh_exec(
+            'docker service ls --format "{{.Name}} {{.Replicas}}"')
+        service_name_list = []
+        service_replica_list = []
+        for service_info in serivce_info_all:
+            service_info = service_info.strip()
+            service_name, service_replica = service_info.split(' ')
+            service_name_list.append(service_name)
+            service_replica_list.append(service_replica)
+
+        results = {}
+        for container in containers:
+            service_name = service + "_" + container.name
+            if service_name in service_name_list:
+                index = service_name_list.index(service_name)
+                service_replica = service_replica_list[index]
+                real, ideal = service_replica.split('/')
+                if ideal == '0':
+                    results[container.name] = False
+                elif real != ideal:
+                    results[container.name] = False
+                else:
+                    results[container.name] = True
+            else:
+                results[container.name] = False
+        return results

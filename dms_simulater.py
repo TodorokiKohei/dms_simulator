@@ -18,13 +18,24 @@ class DmsSimulator():
         print('############### Initializing ############################')
         self._controller.initialize()
 
+    def _check_container(self, results):
+        for key, val in results.items():
+            if not val:
+                raise RuntimeError(f'Container {key} is not running properly.')
+
     def deploy(self):
         # コンテナ展開
         print('############### Deploying ############################')
         self._controller.deploy_broker()
+        self._check_container(self._controller.check_broker())
+
+    def test_performance(self):
+        # pulibhser,subscriberを展開し、パフォーマンスのテストを行う
+        print('############### Test perfomance ############################')
         self._controller.deploy_subscriber()
         self._controller.deploy_publisher()
-        time.sleep(10)
+        self._controller.cehck_subscriber()
+        self._controller.check_publisher()
 
     def clean(self):
         # 環境を掃除する
@@ -34,12 +45,13 @@ class DmsSimulator():
     def run(self):
         self.initialize()
         self.deploy()
+        self.test_performance()
         self.clean()
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mode', default='run', choices=['run', 'init', 'deploy', 'clean'],
+    parser.add_argument('--mode', default='run', choices=['run', 'init', 'deploy', 'test', 'clean'],
                         help='Specify the execution mode (default: run the test)')
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
@@ -78,5 +90,7 @@ if __name__ == "__main__":
         ds.initialize()
     elif args.mode == 'deploy':
         ds.deploy()
+    elif args.mode == 'test':
+        ds.test_performance()
     elif args.mode == 'clean':
         ds.clean()

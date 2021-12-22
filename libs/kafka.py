@@ -150,7 +150,7 @@ class KafkaClientContainer(Container):
             self._config_info['config_dir'], self._config_info['sinet_config_filename']))
 
     def collect_results(self):
-        #
+        # 収集処理無し
         pass
 
 
@@ -170,6 +170,10 @@ class KafkaSubContainer(KafkaClientContainer):
 
 
 class KafkaController(Controller):
+    BROKER_SERVICE = 'kafka-broker'
+    PUBLISHER_SERVICE = 'kafka-publihser'
+    SUBSCRIBER_SERVICE = 'kafka-subscriber'
+
     def __init__(self, node_manager: NodeManager, executer: Executer, systems: dict, root_dir: str):
         super().__init__(node_manager, executer, systems, root_dir)
 
@@ -209,28 +213,37 @@ class KafkaController(Controller):
     def clean(self):
         print(f"remove kafka services")
         self._executre.down_containers(
-            self._broker, self._node_manager, 'kafka-broker')
+            self._broker, self._node_manager, self.BROKER_SERVICE)
         self._executre.down_containers(
-            self._broker, self._node_manager, 'kafka-publisher')
+            self._broker, self._node_manager, self.PUBLISHER_SERVICE)
         self._executre.down_containers(
-            self._broker, self._node_manager, 'kafka-subscriber')
+            self._broker, self._node_manager, self.SUBSCRIBER_SERVICE)
         super().clean()
 
     def deploy_broker(self):
         # brokerコンテナを展開
         print('------------Deploy broker containers------------')
-        print(f"create kafka-broker")
+        print(f"create {self.BROKER_SERVICE}")
         self._executre.up_containers(
-            self._broker, self._node_manager, 'kafka-broker')
+            self._broker, self._node_manager, self.BROKER_SERVICE)
 
     def deploy_publisher(self):
         print('------------Deploy publisher containers------------')
-        print(f"create kafka-publisher")
+        print(f"create {self.PUBLISHER_SERVICE}")
         self._executre.up_containers(
-            self._publisher, self._node_manager, 'kafka-publisher')
+            self._publisher, self._node_manager, self.PUBLISHER_SERVICE)
 
     def deploy_subscriber(self):
         print('------------Deploy subscriber containers------------')
-        print(f"create kafka-subscriber")
+        print(f"create {self.SUBSCRIBER_SERVICE}")
         self._executre.up_containers(
-            self._subscriber, self._node_manager, 'kafka-subscriber')
+            self._subscriber, self._node_manager, self.SUBSCRIBER_SERVICE)
+
+    def check_broker(self):
+        return self._executre.check(self._broker, self._node_manager, self.BROKER_SERVICE)
+
+    def cehck_publisher(self):
+        return self._executre.check(self._publisher, self._node_manager, self.PUBLISHER_SERVICE)
+        
+    def cehck_subscriber(self):
+        return self._executre.check(self._subscriber, self._node_manager, self.SUBSCRIBER_SERVICE)

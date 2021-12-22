@@ -72,6 +72,7 @@ Systems:
             - kafka-2:9092
             - kafka-3:9092
           topic: "partition-3-1"
+  duration: 3m
 
   Subscriber:
     containers:
