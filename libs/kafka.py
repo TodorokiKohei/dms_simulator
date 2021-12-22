@@ -9,6 +9,9 @@ from libs.utils import NodeManager
 
 
 class ZookeeperContainer(Container):
+    """
+    Zookeeperのコンテナ情報を保持するクラス
+    """
     def __init__(self, name: str, configs: dict):
         super().__init__(name, **configs)
         self.image = "confluentinc/cp-zookeeper:5.5.6"
@@ -38,6 +41,9 @@ class ZookeeperContainer(Container):
 
 
 class KafkaContainer(Container):
+    """
+    Kafkaのコンテナ情報を保持するクラス
+    """
     def __init__(self, name: str, configs: dict):
         super().__init__(name, **configs)
         self.image = "confluentinc/cp-kafka:5.5.6"
@@ -94,6 +100,9 @@ class KafkaClientContainer(Container):
         self._set_configs(params)
 
     def _set_configs(self, params: dict):
+        """
+        sinetstreamで使用するパラメータとそれ以外のパラメータを分離する
+        """
         # sinetstream以外の設定を作成
         self._configs = {
             'service': self.__class__.SERVICE,
@@ -103,6 +112,7 @@ class KafkaClientContainer(Container):
             if config_name in params.keys():
                 self._configs[config_name] = params.pop(config_name)
 
+        # 実行時間の指定方法がs, m, hでなければエラーを出す
         duration = params.pop('duration')
         if re.search('h|m|s', duration) is None:
             raise ValueError(
@@ -139,11 +149,18 @@ class KafkaClientContainer(Container):
         self.node.sftp_put(sinet_config_file, os.path.join(
             self._config_info['config_dir'], self._config_info['sinet_config_filename']))
 
+    def collect_results(self):
+        #
+        pass
+
 
 class KafkaPubContainer(KafkaClientContainer):
+    """
+    Kafkaのコンテナ情報を保持するクラス
+    """
     SERVICE = 'publisher'
     CLIENT_COMMAND = 'python publisher.py'
-    CONFIG_LIST = ['number', 'message_size']
+    CONFIG_LIST = ['number', 'message_size', 'message_rate']
 
 
 class KafkaSubContainer(KafkaClientContainer):

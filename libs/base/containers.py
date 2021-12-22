@@ -4,10 +4,16 @@ from abc import ABCMeta, abstractclassmethod
 class AbstractContainer(metaclass=ABCMeta):
     @abstractclassmethod
     def create_volume_dir(self):
+        """
+        コンテナを展開するノードでマウントするボリュームを作成する
+        """
         pass
 
     @abstractclassmethod
     def delete_volume_dir(self):
+        """
+        コンテナを展開するノードでマウントするボリュームを削除する
+        """
         pass
 
     @abstractclassmethod

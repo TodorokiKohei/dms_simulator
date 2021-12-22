@@ -8,22 +8,37 @@ from libs.utils import NodeManager
 class AbstrctController(metaclass=ABCMeta):
     @abstractclassmethod
     def initialize(self):
+        """
+        構築環境の初期化処理
+        """
         pass
 
     @abstractclassmethod
     def clean(self):
+        """
+        構築環境の掃除処理
+        """
         pass
 
     @abstractclassmethod
     def deploy_broker(self):
+        """
+        ブローカーの展開処理
+        """
         pass
 
     @abstractclassmethod
     def deploy_publisher(self):
+        """
+        パブリッシャーの展開処理
+        """
         pass
 
     @abstractclassmethod
     def deploy_subscriber(self):
+        """
+        サブスクライバーの展開処理
+        """
         pass
 
 
