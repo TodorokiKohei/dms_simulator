@@ -19,6 +19,7 @@ Base:
 
 Systems:
   type: kafka
+  duration: 30s
   Broker:
     zookeeper:
       containers:
@@ -64,16 +65,14 @@ Systems:
         environment:
           TZ: Asia/Tokyo
         params:
-          duration: 3m
           number: 1
           message_size: 1k
+          message_rate: 100k
           brokers: 
             - kafka-1:9092
             - kafka-2:9092
             - kafka-3:9092
           topic: "partition-3-1"
-  duration: 3m
-
   Subscriber:
     containers:
       sub-1:
@@ -81,8 +80,8 @@ Systems:
         environment:
           TZ: Asia/Tokyo
         params:
-          duration: 3m
           number: 1
+          record_message: true
           brokers: 
             - kafka-1:9092
             - kafka-2:9092
@@ -95,8 +94,8 @@ Actions:
     time: 100ms
     source:
       - kafka-1
-    destnation:
-      - kafka-2
-      - kafka-3
+    # destnation:
+    #   - kafka-2
+    #   - kafka-3
     start: 1m
     duration: 1m

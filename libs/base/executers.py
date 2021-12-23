@@ -13,6 +13,10 @@ class AbstractExecuter(metaclass=ABCMeta):
         pass
 
     @abstractclassmethod
+    def pull_container_image(self, containers, node_manager):
+        pass
+
+    @abstractclassmethod
     def delete_cluster(self, containers, node_manager):
         pass
 
@@ -24,6 +28,10 @@ class AbstractExecuter(metaclass=ABCMeta):
     def down_containers(self, containers, node_manager, service):
         pass
 
+    @abstractclassmethod
+    def check_running(self, containers, node_manager, service):
+        pass
+
 
 class Executer(AbstractExecuter):
 
@@ -32,3 +40,7 @@ class Executer(AbstractExecuter):
         self._remote_dir = remote_dir
 
         os.makedirs(self._home_dir, exist_ok=True)
+
+    def pull_container_image(self, containers, node_manager):
+        for container in containers:
+            container.node.ssh_exec(f'docker pull {container.image}')

@@ -24,7 +24,7 @@ class SwarmExecuter(Executer):
 
         # swarmの初期化
         res, err = manager.ssh_exec('docker swarm init')
-        join_word = res[4].strip()
+        join_word = res[4]
 
         # workerをクラスターに追加
         for worker in node_manager.get_workers():
@@ -85,7 +85,7 @@ class SwarmExecuter(Executer):
         manager = node_manager.get_manager()
         manager.ssh_exec(f'docker stack rm {service}')
 
-    def check(self, containers: list, node_mangaer: NodeManager, service: str):
+    def check_running(self, containers: list, node_mangaer: NodeManager, service: str):
         # コンテナが展開されているかを確認する
         manager = node_mangaer.get_manager()
         serivce_info_all, _ = manager.ssh_exec(

@@ -12,6 +12,7 @@ class ZookeeperContainer(Container):
     """
     Zookeeperのコンテナ情報を保持するクラス
     """
+
     def __init__(self, name: str, configs: dict):
         super().__init__(name, **configs)
         self.image = "confluentinc/cp-zookeeper:5.5.6"
@@ -44,6 +45,7 @@ class KafkaContainer(Container):
     """
     Kafkaのコンテナ情報を保持するクラス
     """
+
     def __init__(self, name: str, configs: dict):
         super().__init__(name, **configs)
         self.image = "confluentinc/cp-kafka:5.5.6"
@@ -70,32 +72,38 @@ class KafkaContainer(Container):
 class KafkaClientContainer(Container):
     SERVICE: str
     CLIENT_COMMAND: str
-    CONFIG_LIST: list
+    REQUIRE_CONFIGS: list
+    ARBITRARY_CONFIGS: list
 
     def __init__(self, name: str, configs: dict):
         super().__init__(name, **configs)
         self.image = 'todoroki182814/dms-client'
-        self.volumes = [
-            {
-                'type': 'bind',
-                'source': f'/tmp/{self.name}/configs',
-                'target': '/code/configs'
-            },
-            {
-                'type': 'bind',
-                'source': f'/tmp/{self.name}/results',
-                'target': '/code/results'
-            }
-        ]
-        if self.networks is None:
-            self.networks = ['kafka-network']
-        self.command = self.__class__.CLIENT_COMMAND
-
+        # configとresultの情報を設定
         self._config_info = {
             'config_dir': f'/tmp/{self.name}/configs',
             'config_filename': f'{self.__class__.SERVICE}_config.yml',
             'sinet_config_filename': '.sinetstream_config.yml'
         }
+        self._result_info = {
+            'result_dir': f'/tmp/{self.name}/results'
+        }
+        self.volumes = [
+            {
+                'type': 'bind',
+                'source': self._config_info['config_dir'],
+                'target': '/code/configs'
+            },
+            {
+                'type': 'bind',
+                'source': self._result_info['result_dir'],
+                'target': '/code/results'
+            }
+        ]
+        if self.networks is None:
+            self.networks = ['kafka-network']
+        # 実行するコマンドの設定
+        self.command = self.__class__.CLIENT_COMMAND
+        # configの設定
         params = configs['params']
         self._set_configs(params)
 
@@ -107,17 +115,21 @@ class KafkaClientContainer(Container):
         self._configs = {
             'service': self.__class__.SERVICE,
             'name': self.name
-            }
-        for config_name in self.__class__.CONFIG_LIST:
+        }
+        for config_name in self.__class__.REQUIRE_CONFIGS:
+            if config_name in params.keys():
+                self._configs[config_name] = params.pop(config_name)
+            else:
+                raise RuntimeError(
+                    f'Please sepcify {config_name} in {self.name}')
+        for config_name in self.__class__.ARBITRARY_CONFIGS:
             if config_name in params.keys():
                 self._configs[config_name] = params.pop(config_name)
 
         # 実行時間の指定方法がs, m, hでなければエラーを出す
-        duration = params.pop('duration')
-        if re.search('h|m|s', duration) is None:
+        if re.search('h|m|s', self._configs['duration']) is None:
             raise ValueError(
                 'Please specify "s" or "m" or "h" for the duration')
-        self._configs['duration'] = duration
 
         # sinetstreamの設定を作成
         params['type'] = 'kafka'
@@ -125,6 +137,7 @@ class KafkaClientContainer(Container):
         self._sinet_configs = {self.__class__.SERVICE: params}
 
     def to_swarm(self):
+        # 終了後に再起動しないようにエラー時のみ再起動するよう設定
         swarm = super().to_swarm()
         restart_policy = {
             'condition': 'on-failure'
@@ -150,8 +163,10 @@ class KafkaClientContainer(Container):
             self._config_info['config_dir'], self._config_info['sinet_config_filename']))
 
     def collect_results(self):
-        # 収集処理無し
-        pass
+        ls_res, _ = self.node.ssh_exec(f'ls {self._result_info["result_dir"]}')
+        for f in ls_res:
+            self.node.sftp_get(os.path.join(
+                self._result_info['result_dir'], f), os.path.join(self.home_dir, f))
 
 
 class KafkaPubContainer(KafkaClientContainer):
@@ -160,13 +175,15 @@ class KafkaPubContainer(KafkaClientContainer):
     """
     SERVICE = 'publisher'
     CLIENT_COMMAND = 'python publisher.py'
-    CONFIG_LIST = ['number', 'message_size', 'message_rate']
+    REQUIRE_CONFIGS = ['duration', 'number', 'message_size']
+    ARBITRARY_CONFIGS = ['message_rate']
 
 
 class KafkaSubContainer(KafkaClientContainer):
     SERVICE = 'subscriber'
     CLIENT_COMMAND = 'python subscriber.py'
-    CONFIG_LIST = ['number']
+    REQUIRE_CONFIGS = ['duration', 'number']
+    ARBITRARY_CONFIGS = ['record_message']
 
 
 class KafkaController(Controller):
@@ -189,12 +206,16 @@ class KafkaController(Controller):
         # Publisherのコンテナ情報の作成
         pub_info = systems['Publisher']
         for name, configs in pub_info['containers'].items():
+            if 'duration' not in configs['params'].keys():
+                configs['params']['duration'] = systems['duration']
             self._publisher.append(KafkaPubContainer(name, configs))
         self._containers.extend(self._publisher)
 
         # Subscriberのコンテナ情報の作成
         sub_info = systems['Subscriber']
         for name, configs in sub_info['containers'].items():
+            if 'duration' not in configs['params'].keys():
+                configs['params']['duration'] = systems['duration']
             self._subscriber.append(KafkaSubContainer(name, configs))
         self._containers.extend(self._subscriber)
 
@@ -209,41 +230,3 @@ class KafkaController(Controller):
                     'partitions': partitions,
                     'replication-factor': replication_factor
                 })
-
-    def clean(self):
-        print(f"remove kafka services")
-        self._executre.down_containers(
-            self._broker, self._node_manager, self.BROKER_SERVICE)
-        self._executre.down_containers(
-            self._broker, self._node_manager, self.PUBLISHER_SERVICE)
-        self._executre.down_containers(
-            self._broker, self._node_manager, self.SUBSCRIBER_SERVICE)
-        super().clean()
-
-    def deploy_broker(self):
-        # brokerコンテナを展開
-        print('------------Deploy broker containers------------')
-        print(f"create {self.BROKER_SERVICE}")
-        self._executre.up_containers(
-            self._broker, self._node_manager, self.BROKER_SERVICE)
-
-    def deploy_publisher(self):
-        print('------------Deploy publisher containers------------')
-        print(f"create {self.PUBLISHER_SERVICE}")
-        self._executre.up_containers(
-            self._publisher, self._node_manager, self.PUBLISHER_SERVICE)
-
-    def deploy_subscriber(self):
-        print('------------Deploy subscriber containers------------')
-        print(f"create {self.SUBSCRIBER_SERVICE}")
-        self._executre.up_containers(
-            self._subscriber, self._node_manager, self.SUBSCRIBER_SERVICE)
-
-    def check_broker(self):
-        return self._executre.check(self._broker, self._node_manager, self.BROKER_SERVICE)
-
-    def cehck_publisher(self):
-        return self._executre.check(self._publisher, self._node_manager, self.PUBLISHER_SERVICE)
-        
-    def cehck_subscriber(self):
-        return self._executre.check(self._subscriber, self._node_manager, self.SUBSCRIBER_SERVICE)
