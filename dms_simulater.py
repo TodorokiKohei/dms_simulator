@@ -1,6 +1,7 @@
 import argparse
 import os
 import time
+import threading
 
 import schedule
 import yaml
@@ -40,6 +41,17 @@ class DmsSimulator():
         raise RuntimeError(
             f'Container [{",".join(ng_container)}] is not running properly.')
 
+    def _check_container_down(self, check_function):
+        """
+        コンテナサービスが停止しているかどうかを確認する
+        """
+        container_status = check_function()
+        all_down = True
+        for _, status in container_status.items():
+            if status:
+                all_down = False
+        return all_down
+
     def deploy(self):
         """
         """
@@ -47,14 +59,6 @@ class DmsSimulator():
         print('############### Deploying ###############')
         self._controller.deploy_broker()
         self._check_container_running(self._controller.check_broker_running, 5)
-
-    def _check_container_down(self, check_function):
-        container_status = check_function()
-        all_down = True
-        for _, status in container_status.items():
-            if status:
-                all_down = False
-        return all_down
 
     def _collect_job(self):
         """
@@ -76,13 +80,20 @@ class DmsSimulator():
         """
         # pulibhser,subscriberを展開し、パフォーマンスのテストを行う
         print('############### Test perfomance ###############')
-        self._controller.deploy_subscriber()
-        self._controller.deploy_publisher()
+        thread_pub = threading.Thread(
+            target=self._controller.deploy_subscriber)
+        thread_sub = threading.Thread(target=self._controller.deploy_publisher)
+        thread_pub.start()
+        thread_sub.start()
+        thread_pub.join()
+        thread_sub.join()
 
         self._check_container_running(
             self._controller.check_subscriber_running, 5)
         self._check_container_running(
             self._controller.check_publisher_running, 5)
+
+        print(f"-------------- Execution Time: {controller.duration} sec --------------")
 
         # 実行結果の回収時間をスケジューラーに登録し待機する
         self._scheduler.every(
@@ -146,7 +157,7 @@ if __name__ == "__main__":
     if template["Systems"]["type"] == 'kafka':
         controller = KafkaController(
             node_manager, executer, template['Systems'], root_dir)
-    controller.init_container()
+    controller.init_containers()
 
     # シミュレーションにコントローラーを設定し実行する
     ds = DmsSimulator(controller)
