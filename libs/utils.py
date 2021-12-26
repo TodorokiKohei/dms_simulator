@@ -1,15 +1,33 @@
+import re
 import time
+import threading
+
 import paramiko
+
+lock = threading.Lock()
 
 
 def connect(func):
+    """
+    ssh接続を確立してからコマンドを実行する関数
+    """
+
     def exec(self, *args, **kwargs):
-        self._client.connect(self.address, username=self.user,
-                             key_filename=self.keyfile, timeout=5)
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(self.address, username=self.user,
+                       key_filename=self.keyfile, timeout=5)
+        kwargs['client'] = client
         res, err = func(self, *args, **kwargs)
-        print(res)
-        print(err)
-        self._client.close()
+        client.close()
+        res = [s.rstrip() for s in res]
+        err = [s.rstrip() for s in err]
+        with lock:
+            if res != []:
+                print(res)
+            if err != []:
+                print("************** ERROR **************")
+                print(err)
         return (res, err)
     return exec
 
@@ -24,9 +42,6 @@ class Node:
         self.is_manager = is_manager
         self._hostname = None
 
-        self._client = paramiko.SSHClient()
-        self._client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-
     @property
     def hostname(self):
         if self._hostname is not None:
@@ -36,16 +51,16 @@ class Node:
         return self._hostname
 
     @connect
-    def ssh_exec(self, cmd):
+    def ssh_exec(self, cmd, client):
         print(f'[{self.name}]: {cmd}')
-        stdin, stdout, stderr = self._client.exec_command(cmd)
+        stdin, stdout, stderr = client.exec_command(cmd)
         stdout.channel.recv_exit_status()
         return (stdout.readlines(), stderr.readlines())
 
     @connect
-    def ssh_exec_sudo(self, cmd):
+    def ssh_exec_sudo(self, cmd, client):
         print(f'[{self.name}]: {cmd}')
-        stdin, stdout, stderr = self._client.exec_command(cmd, get_pty=True)
+        stdin, stdout, stderr = client.exec_command(cmd, get_pty=True)
         cnt = 0
         while len(stdout.channel.in_buffer) == 0:
             time.sleep(0.1)
@@ -58,16 +73,16 @@ class Node:
         return (stdout.readlines(), stderr.readlines())
 
     @connect
-    def sftp_put(self, local, remote):
+    def sftp_put(self, local, remote, client):
         print(f'[{self.name}]: sftp {local} {remote}')
-        with self._client.open_sftp() as sftp:
+        with client.open_sftp() as sftp:
             sftp.put(local, remote)
         return ("", "")
 
     @connect
-    def sftp_get(self, remote, local):
+    def sftp_get(self, remote, local, client):
         print(f'[{self.name}]: sftp {remote} {local}')
-        with self._client.open_sftp() as sftp:
+        with client.open_sftp() as sftp:
             sftp.get(remote, local)
         return ("", "")
 
@@ -101,3 +116,37 @@ class NodeManager:
         for node in self._nodes:
             if node.match_name(node_name):
                 return node
+
+
+def change_time_to_sec(t):
+    """
+    h,m,s指定の時間を秒(数値)に変換
+    """
+    if re.search('h|m|s', t) is None:
+        raise ValueError(
+            'Please specify "s" or "m" or "h" for the duration')
+    sec = 0
+    for sep in ['h', 'm', 's']:
+        if sep in t:
+            val, t = t.split(sep)
+            if sep == 'h':
+                sec += int(val) * 60 * 60
+            elif sep == 'm':
+                sec += int(val) * 60
+            elif sep == 's':
+                sec += int(val)
+    return sec
+
+
+def change_size_to_byte(size):
+    """
+    m,k指定のサイズをバイト(数値)に変換
+    """
+    byte = 0
+    if 'm' in size:
+        byte = int(size.split('m')[0]) * 1000 * 1000
+    elif 'k' in size:
+        byte = int(size.split('k')[0]) * 1000
+    else:
+        byte = int(size)
+    return byte
