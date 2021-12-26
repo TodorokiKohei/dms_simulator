@@ -1,7 +1,10 @@
 import os
 import re
+from abc import abstractclassmethod
+
 import yaml
 
+from libs import utils
 from libs.base.containers import Container
 from libs.base.controllers import Controller
 from libs.base.executers import Executer
@@ -14,23 +17,23 @@ class ZookeeperContainer(Container):
     """
 
     def __init__(self, name: str, configs: dict):
-        super().__init__(name, **configs)
-        self.image = "confluentinc/cp-zookeeper:5.5.6"
-        if self.volumes is None:
-            self.volumes = [
+        configs['image'] = 'confluentinc/cp-zookeeper:5.5.6'
+        if 'networks' not in configs.keys():
+            configs['networks'] = ['kafka-network']
+        if 'volumes' not in configs.keys():
+            configs['volumes'] = [
                 {
                     'type': 'bind',
-                    'source': f'/tmp/{self.name}/log',
+                    'source': f'/tmp/{name}/log',
                     'target': '/var/lib/zookeeper/log'
                 },
                 {
                     'type': 'bind',
-                    'source': f'/tmp/{self.name}/data',
+                    'source': f'/tmp/{name}/data',
                     'target': '/var/lib/zookeeper/data'
                 }
             ]
-        if self.networks is None:
-            self.networks = ['kafka-network']
+        super().__init__(name, **configs)
 
     def pre_up_process(self):
         # 事前処理無し
@@ -47,18 +50,18 @@ class KafkaContainer(Container):
     """
 
     def __init__(self, name: str, configs: dict):
-        super().__init__(name, **configs)
-        self.image = "confluentinc/cp-kafka:5.5.6"
-        if self.volumes is None:
-            self.volumes = [
+        configs['image'] = 'confluentinc/cp-kafka:5.5.6'
+        if 'networks' not in configs.keys():
+            configs['networks'] = ['kafka-network']
+        if 'volumes' not in configs.keys():
+            configs['volumes'] = [
                 {
                     'type': 'bind',
-                    'source': f'/tmp/{self.name}/data',
+                    'source': f'/tmp/{name}/data',
                     'target': '/var/lib/kafka/data'
                 },
             ]
-        if self.networks is None:
-            self.networks = ['kafka-network']
+        super().__init__(name, **configs)
 
     def pre_up_process(self):
         # 事前処理無し
@@ -76,18 +79,20 @@ class KafkaClientContainer(Container):
     ARBITRARY_CONFIGS: list
 
     def __init__(self, name: str, configs: dict):
-        super().__init__(name, **configs)
-        self.image = 'todoroki182814/dms-client'
         # configとresultの情報を設定
         self._config_info = {
-            'config_dir': f'/tmp/{self.name}/configs',
+            'config_dir': f'/tmp/{name}/configs',
             'config_filename': f'{self.__class__.SERVICE}_config.yml',
             'sinet_config_filename': '.sinetstream_config.yml'
         }
         self._result_info = {
-            'result_dir': f'/tmp/{self.name}/results'
+            'result_dir': f'/tmp/{name}/results'
         }
-        self.volumes = [
+        # コンテナ情報設定
+        configs['image'] = 'todoroki182814/dms-client'
+        if 'networks' not in configs.keys():
+            configs['networks'] = ['kafka-network']
+        configs['volumes'] = [
             {
                 'type': 'bind',
                 'source': self._config_info['config_dir'],
@@ -99,13 +104,16 @@ class KafkaClientContainer(Container):
                 'target': '/code/results'
             }
         ]
-        if self.networks is None:
-            self.networks = ['kafka-network']
-        # 実行するコマンドの設定
-        self.command = self.__class__.CLIENT_COMMAND
-        # configの設定
-        params = configs['params']
+        configs['command'] = self.__class__.CLIENT_COMMAND 
+
+        # paramsをconfigsから除き, コンストラクタを実行
+        params = configs.pop('params')
+        super().__init__(name, **configs)
+
+        # paramsから実行に必要なconfigを作成
         self._set_configs(params)
+        self._convert_configs()
+        
 
     def _set_configs(self, params: dict):
         """
@@ -126,15 +134,14 @@ class KafkaClientContainer(Container):
             if config_name in params.keys():
                 self._configs[config_name] = params.pop(config_name)
 
-        # 実行時間の指定方法がs, m, hでなければエラーを出す
-        if re.search('h|m|s', self._configs['duration']) is None:
-            raise ValueError(
-                'Please specify "s" or "m" or "h" for the duration')
-
         # sinetstreamの設定を作成
         params['type'] = 'kafka'
         params['value_type'] = 'text'
         self._sinet_configs = {self.__class__.SERVICE: params}
+
+    @abstractclassmethod
+    def _convert_configs(self):
+        pass
 
     def to_swarm(self):
         # 終了後に再起動しないようにエラー時のみ再起動するよう設定
@@ -170,13 +177,19 @@ class KafkaClientContainer(Container):
 
 
 class KafkaPubContainer(KafkaClientContainer):
-    """
-    Kafkaのコンテナ情報を保持するクラス
-    """
     SERVICE = 'publisher'
     CLIENT_COMMAND = 'python publisher.py'
     REQUIRE_CONFIGS = ['duration', 'number', 'message_size']
     ARBITRARY_CONFIGS = ['message_rate']
+
+    def _convert_configs(self):
+        self._configs['duration'] = utils.change_time_to_sec(
+            self._configs['duration'])
+        self._configs['message_size'] = utils.change_size_to_byte(
+            self._configs['message_size'])
+        if 'message_rate' in self._configs.keys():
+            self._configs['message_rate'] = utils.change_size_to_byte(
+                self._configs['message_rate'])
 
 
 class KafkaSubContainer(KafkaClientContainer):
@@ -184,6 +197,10 @@ class KafkaSubContainer(KafkaClientContainer):
     CLIENT_COMMAND = 'python subscriber.py'
     REQUIRE_CONFIGS = ['duration', 'number']
     ARBITRARY_CONFIGS = ['record_message']
+
+    def _convert_configs(self):
+        self._configs['duration'] = utils.change_time_to_sec(
+            self._configs['duration'])
 
 
 class KafkaController(Controller):
@@ -201,7 +218,6 @@ class KafkaController(Controller):
         kafka_info = systems['Broker']['kafka']
         for name, configs in kafka_info['containers'].items():
             self._broker.append(KafkaContainer(name, configs))
-        self._containers.extend(self._broker)
 
         # Publisherのコンテナ情報の作成
         pub_info = systems['Publisher']
@@ -209,7 +225,6 @@ class KafkaController(Controller):
             if 'duration' not in configs['params'].keys():
                 configs['params']['duration'] = systems['duration']
             self._publisher.append(KafkaPubContainer(name, configs))
-        self._containers.extend(self._publisher)
 
         # Subscriberのコンテナ情報の作成
         sub_info = systems['Subscriber']
@@ -217,6 +232,9 @@ class KafkaController(Controller):
             if 'duration' not in configs['params'].keys():
                 configs['params']['duration'] = systems['duration']
             self._subscriber.append(KafkaSubContainer(name, configs))
+
+        self._containers.extend(self._broker)
+        self._containers.extend(self._publisher)
         self._containers.extend(self._subscriber)
 
         # 作成するトピックの情報を作成

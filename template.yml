@@ -19,7 +19,7 @@ Base:
 
 Systems:
   type: kafka
-  duration: 30s
+  duration: 1m
   Broker:
     zookeeper:
       containers:
@@ -62,12 +62,10 @@ Systems:
     containers:
       pub-1:
         node_name: publisher-1
-        environment:
-          TZ: Asia/Tokyo
         params:
           number: 1
           message_size: 1k
-          message_rate: 100k
+          # message_rate: 100k
           brokers: 
             - kafka-1:9092
             - kafka-2:9092
@@ -77,8 +75,6 @@ Systems:
     containers:
       sub-1:
         node_name: subscriber-1
-        environment:
-          TZ: Asia/Tokyo
         params:
           number: 1
           record_message: true

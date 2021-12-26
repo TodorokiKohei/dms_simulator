@@ -39,9 +39,9 @@ class AbstractContainer(metaclass=ABCMeta):
 
 
 class Container(AbstractContainer):
-    def __init__(self, name, node_name=None, ports=None, volumes=None, environment=None, networks=None,
-                 command=None, **kwargs):
-        self.image = None
+    def __init__(self, name, image=None, node_name=None, ports=None, volumes=None, environment=None, networks=None,
+                 command=None):
+        self.image = image
         self.name = name
         self.node_name = node_name
         self.ports = ports
@@ -58,6 +58,8 @@ class Container(AbstractContainer):
         if self.volumes is None:
             return
         for vol in self.volumes:
+            if vol['source'] == '/var/run/docker.sock':
+                continue
             self.node.ssh_exec(f'mkdir -p {vol["source"]}')
 
     def delete_volume_dir(self):
@@ -65,6 +67,8 @@ class Container(AbstractContainer):
             return
         for vol in self.volumes:
             if vol['source'] == '/':
+                continue
+            if vol['source'] == '/var/run/docker.sock':
                 continue
             self.node.ssh_exec_sudo(f'sudo rm -rf {vol["source"]}')
 
@@ -85,6 +89,7 @@ class Container(AbstractContainer):
             swarm['command'] = self.command
         swarm['deploy'] = {
             'mode': 'global',
+            'endpoint_mode': 'dnsrr',
             'placement':
                 {'constraints': [f'node.hostname=={self.node.hostname}']}
         }

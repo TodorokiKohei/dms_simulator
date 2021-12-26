@@ -1,22 +1,23 @@
 import os
 from abc import ABCMeta, abstractclassmethod
 
+from libs import utils
 from libs.base.executers import Executer
 from libs.utils import NodeManager
 
 
 class AbstrctController(metaclass=ABCMeta):
     @abstractclassmethod
-    def initialize(self):
+    def init_containers(self):
         """
-        構築環境の初期化処理
+        コンテナ起動可能にするための前処理
         """
         pass
 
     @abstractclassmethod
-    def init_container(self):
+    def initialize(self):
         """
-        コンテナ起動可能にするための前処理
+        構築環境の初期化処理
         """
         pass
 
@@ -98,7 +99,7 @@ class AbstrctController(metaclass=ABCMeta):
         pass
 
 
-class Controller(metaclass=ABCMeta):
+class Controller(AbstrctController):
     BROKER_SERVICE: str
     PUBLISHER_SERVICE: str
     SUBSCRIBER_SERVICE: str
@@ -117,32 +118,9 @@ class Controller(metaclass=ABCMeta):
 
     @property
     def duration(self):
-        sec = 0
-        duration_str = self._duration
-        for sep in ['h', 'm', 's']:
-            if sep in self._duration:
-                val, duration_str = duration_str.split(sep)
-                if sep == 'h':
-                    sec += int(val) * 60 * 60
-                elif sep == 'm':
-                    sec += int(val) * 60
-                elif sep == 's':
-                    sec += int(val)
-        return sec
+        return utils.change_time_to_sec(self._duration)
 
-    def initialize(self):
-        # コンテナのボリュームを作成
-        for container in self._containers:
-            container.create_volume_dir()
-        # コンテナのPULL処理
-
-        # executerの初期化処理
-        self._executre.create_remote_dir(self._containers, self._node_manager)
-        self._executre.create_cluster(self._containers, self._node_manager)
-        self._executre.pull_container_image(
-            self._containers, self._node_manager)
-
-    def init_container(self):
+    def init_containers(self):
         # コンテナを展開するノードを設定
         for container in self._containers:
             node = self._node_manager.get_match_node(container.node_name)
@@ -155,6 +133,17 @@ class Controller(metaclass=ABCMeta):
         for container in self._containers:
             container.home_dir = os.path.join(self._home_dir, container.name)
             os.makedirs(container.home_dir, exist_ok=True)
+
+    def initialize(self):
+        # コンテナのボリュームを作成
+        for container in self._containers:
+            container.create_volume_dir()
+
+        # executerの初期化処理
+        self._executre.create_remote_dir(self._containers, self._node_manager)
+        self._executre.create_cluster(self._containers, self._node_manager)
+        self._executre.pull_container_image(
+            self._containers, self._node_manager)
 
     def clean(self):
         # コンテナのボリュームを削除
@@ -197,16 +186,19 @@ class Controller(metaclass=ABCMeta):
         return self._executre.check_running(self._subscriber, self._node_manager, self.SUBSCRIBER_SERVICE)
 
     def remove_broker(self):
+        # brokerの削除を行う
         print(f"remove {self.__class__.BROKER_SERVICE}")
         self._executre.down_containers(
             self._broker, self._node_manager, self.__class__.BROKER_SERVICE)
 
     def remove_publisher(self):
+        # publisherの削除を行う
         print(f"remove {self.__class__.PUBLISHER_SERVICE}")
         self._executre.down_containers(
             self._broker, self._node_manager, self.__class__.PUBLISHER_SERVICE)
 
     def remove_subscriber(self):
+        # subscriberの削除を行う
         print(f"remove {self.__class__.SUBSCRIBER_SERVICE}")
         self._executre.down_containers(
             self._broker, self._node_manager, self.__class__.SUBSCRIBER_SERVICE)
