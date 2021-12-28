@@ -1,35 +1,69 @@
 import os
 from abc import ABCMeta, abstractclassmethod
 
+from libs.utils import NodeManager
+
 
 class AbstractExecuter(metaclass=ABCMeta):
 
     @abstractclassmethod
-    def create_remote_dir(self, containers, node_manager):
+    def create_remote_dir(self, containers: list, node_manager: NodeManager):
+        """
+        compose-fileなどを保存するためのリモートディレクトリを作成
+        """
         pass
 
     @abstractclassmethod
-    def create_cluster(self, containers, node_manager):
+    def create_cluster(self, containers: list, node_manager: NodeManager):
+        """
+        Docker Swarmなどのクラスター構築処理
+        """
         pass
 
     @abstractclassmethod
-    def pull_container_image(self, containers, node_manager):
+    def pull_container_image(self, containers: list, node_manager: NodeManager):
         pass
 
     @abstractclassmethod
-    def delete_cluster(self, containers, node_manager):
+    def delete_cluster(self, containers: list, node_manager: NodeManager):
+        """
+        Docker Swarmなどのクラスター削除処理
+        """
         pass
 
     @abstractclassmethod
-    def up_containers(self, containers, node_manager, service):
+    def up_containers(self, containers: list, node_manager: NodeManager, service: str):
+        """
+        クラスターにコンテナを展開する
+        """
         pass
 
     @abstractclassmethod
-    def down_containers(self, containers, node_manager, service):
+    def down_containers(self, containers: list, node_manager: NodeManager, service: str):
+        """
+        クラスターのコンテナを削除する
+        """
         pass
 
     @abstractclassmethod
-    def check_running(self, containers, node_manager, service):
+    def check_running(self, containers: list, node_manager: NodeManager, service: str):
+        """
+        指定コンテナが起動しているかどうかを確認
+        """
+        pass
+
+    @abstractclassmethod
+    def collect_logs(self, containers: list, node_manager: NodeManager, service: str):
+        """
+        コンテナが出力するログを回収する
+        """
+        pass
+
+    @abstractclassmethod
+    def pull_container_image(self, containers: list, node_manager: NodeManager):
+        """
+        コンテナイメージを展開先ノードにpullする
+        """
         pass
 
 

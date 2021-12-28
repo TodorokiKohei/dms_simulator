@@ -14,12 +14,23 @@ class SwarmExecuter(Executer):
         os.makedirs(self._compose_dir, exist_ok=True)
         self._debug_mode = debug_mode
 
+    def _get_container_network(self, containers):
+        """
+
+        """
+        networks = set()
+        for container in containers:
+            if container.networks is None:
+                continue
+            for network in container.networks:
+                networks.add(network)
+        return networks
+
     def create_remote_dir(self, containers: list, node_manager: NodeManager):
-        # マネージャーノードにコンテナ展開用のディレクトリを作成
         manager = node_manager.get_manager()
         manager.ssh_exec(f'mkdir -p {self._remote_dir}')
 
-    def create_cluster(self, containers, node_manager):
+    def create_cluster(self, containers: list, node_manager: NodeManager):
         manager = node_manager.get_manager()
 
         # swarmの初期化
@@ -31,12 +42,7 @@ class SwarmExecuter(Executer):
             worker.ssh_exec(join_word)
 
         # ネットワークの作成
-        networks = set()
-        for container in containers:
-            if container.networks is None:
-                continue
-            for network in container.networks:
-                networks.add(network)
+        networks = self._get_container_network(containers)
         for network in networks:
             manager.ssh_exec(f'docker network create -d overlay {network}')
 
@@ -51,7 +57,7 @@ class SwarmExecuter(Executer):
         manager.ssh_exec('docker swarm leave -f')
 
     def up_containers(self, containers: list, node_manager: NodeManager, service: str):
-        # swarmで展開するためのcomposeファイルを作成
+        # swarmで展開するためのcompose-fileの内容を作成
         swarm = {}
         for container in containers:
             container.pre_up_process()
@@ -59,18 +65,22 @@ class SwarmExecuter(Executer):
         compose = {
             'version': '3.8',
             'services': swarm,
-            'networks': {
-                'kafka-network': {
-                    'external': True
-                }
-            }
         }
+
+        # コンテナに設定されているnetworkをcompose-fileの内容に追加
+        networks = self._get_container_network(containers)
+        if networks != set():
+            compose['networks'] = {}
+            for network in networks:
+                compose['networks'][network] = {'external': True}
+
+        # compose-fileを作成
         compose_file = os.path.join(
             self._compose_dir, f'docker-compose-{service}.yml')
         with open(compose_file, mode='w', encoding='utf-8') as f:
             yaml.safe_dump(compose, f, sort_keys=False)
 
-        # managerノードにcomposeファイルを転送し、コンテナを展開する
+        # managerノードにcompose-fileを転送し、コンテナを展開する
         manager = node_manager.get_manager()
         remote_compose_file = os.path.join(
             self._remote_dir, f'docker-compose-{service}.yml')
@@ -85,9 +95,9 @@ class SwarmExecuter(Executer):
         manager = node_manager.get_manager()
         manager.ssh_exec(f'docker stack rm {service}')
 
-    def check_running(self, containers: list, node_mangaer: NodeManager, service: str):
-        # コンテナが展開されているかを確認する
-        manager = node_mangaer.get_manager()
+    def check_running(self, containers: list, node_manager: NodeManager, service: str):
+        # Dockerのコマンドで展開しているコンテナを取得
+        manager = node_manager.get_manager()
         serivce_info_all, _ = manager.ssh_exec(
             'docker service ls --format "{{.Name}} {{.Replicas}}"')
         service_name_list = []
@@ -97,7 +107,7 @@ class SwarmExecuter(Executer):
             service_name, service_replica = service_info.split(' ')
             service_name_list.append(service_name)
             service_replica_list.append(service_replica)
-
+        # 起動確認したいコンテナ名を探索し、Replica数と起動数が一致していれば正常起動としてTrueを設定
         results = {}
         for container in containers:
             service_name = service + "_" + container.name
@@ -114,3 +124,12 @@ class SwarmExecuter(Executer):
             else:
                 results[container.name] = False
         return results
+
+    def collect_logs(self, containers: list, node_manager: NodeManager, service: str):
+        manager = node_manager.get_manager()
+        for container in containers:
+            # スタック名とコンテナ名からサービス名を作成
+            service_name = f'{service}_{container.name}'
+            _, log = manager.ssh_exec(f'docker service logs {service_name}')
+            with open(os.path.join(container.home_dir, container.name), mode='w') as f:
+                f.writelines('\n'.join(log))

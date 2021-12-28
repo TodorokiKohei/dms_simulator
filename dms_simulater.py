@@ -18,8 +18,8 @@ class DmsSimulator():
 
     def initialize(self):
         """
+        コントローラーを介した初期設定
         """
-        # 初期設定
         print('############### Initializing ###############')
         self._controller.initialize()
 
@@ -54,14 +54,15 @@ class DmsSimulator():
 
     def deploy(self):
         """
+        brokerを展開し、コンテナが起動しているかを確認する
         """
-        # Brokerを展開し、全て起動しているかどうかを確認する
         print('############### Deploying ###############')
         self._controller.deploy_broker()
         self._check_container_running(self._controller.check_broker_running, 5)
 
     def _collect_job(self):
         """
+        publisher,subscriberが停止していることを確認してから結果を回収する
         """
         print('############### Collect results ###############')
         while True:
@@ -73,49 +74,60 @@ class DmsSimulator():
                 break
             time.sleep(1)
         self._controller.collect_container_results()
+        self._controller.collect_actions_logs()
         return schedule.CancelJob
 
     def test_performance(self):
         """
+        publisher,subscriberを展開し、パフォーマンステストを実行する
         """
-        # pulibhser,subscriberを展開し、パフォーマンスのテストを行う
+        # actionsの設定
+        self._controller.set_up_actions()
+
+        # pulibhser,subscriberを展開
         print('############### Test perfomance ###############')
-        thread_pub = threading.Thread(
-            target=self._controller.deploy_subscriber)
+        thread_pub = threading.Thread(target=self._controller.deploy_subscriber)
         thread_sub = threading.Thread(target=self._controller.deploy_publisher)
         thread_pub.start()
         thread_sub.start()
         thread_pub.join()
         thread_sub.join()
-
+        
+        # 起動確認
         self._check_container_running(
             self._controller.check_subscriber_running, 5)
         self._check_container_running(
             self._controller.check_publisher_running, 5)
-
         print(f"-------------- Execution Time: {controller.duration} sec --------------")
 
-        # 実行結果の回収時間をスケジューラーに登録し待機する
+        # 結果の回収,障害注入をスケジューラーに登録し待機する
         self._scheduler.every(
             self._controller.duration).seconds.do(self._collect_job)
+        self._controller.schedule_actions(self._scheduler)
+        print(self._scheduler.get_jobs())
         while self._scheduler.get_jobs() != []:
             self._scheduler.run_pending()
             time.sleep(1)
 
-        # publisher, subscriberを削除
+        # publisher, subscriber, actionsコンテナを削除
         self._controller.remove_publisher()
         self._controller.remove_subscriber()
+        self._controller.remove_actions()
 
     def clean(self):
         """
+        展開した環境を削除する
         """
-        # 環境を掃除する
         print('############### Cleaning ###############')
         self._controller.remove_broker()
+        self._controller.remove_publisher()
+        self._controller.remove_subscriber()
+        self._controller.remove_actions()
         self._controller.clean()
 
     def run(self):
         """
+        環境構築 -> コンテナ展開 -> 結果収集 -> 環境削除の順に実行する
         """
         self.initialize()
         self.deploy()
@@ -130,6 +142,7 @@ if __name__ == "__main__":
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
 
+    # テンプレートファイルの読み込み
     with open("template.yml", mode='r', encoding='utf-8') as f:
         template = yaml.safe_load(f)
 
@@ -157,6 +170,12 @@ if __name__ == "__main__":
     if template["Systems"]["type"] == 'kafka':
         controller = KafkaController(
             node_manager, executer, template['Systems'], root_dir)
+
+    # 発生障害の情報を作成する
+    if 'Actions' in template.keys():
+        controller.create_actions(template['Actions'])
+
+    # コンテナの初期設定を行う
     controller.init_containers()
 
     # シミュレーションにコントローラーを設定し実行する

@@ -55,6 +55,9 @@ class Container(AbstractContainer):
         self.inner_ip = None
 
     def create_volume_dir(self):
+        """
+        ssh接続を行いボリュームに指定されたディレクトリを作成する
+        """
         if self.volumes is None:
             return
         for vol in self.volumes:
@@ -63,6 +66,9 @@ class Container(AbstractContainer):
             self.node.ssh_exec(f'mkdir -p {vol["source"]}')
 
     def delete_volume_dir(self):
+        """
+        ssh接続を行いボリュームに指定されたディレクトリを削除する
+        """
         if self.volumes is None:
             return
         for vol in self.volumes:

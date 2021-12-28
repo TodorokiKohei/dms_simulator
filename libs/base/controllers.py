@@ -1,16 +1,57 @@
 import os
+import copy
 from abc import ABCMeta, abstractclassmethod
 
+from schedule import Scheduler
+import schedule
+
 from libs import utils
+from libs.base.containers import Container
 from libs.base.executers import Executer
 from libs.utils import NodeManager
+from libs.pumba import PumbaNetemContainer
 
 
 class AbstrctController(metaclass=ABCMeta):
     @abstractclassmethod
+    def create_actions(self, actions):
+        """
+        テンプレートファイルを基に障害注入情報の作成
+        """
+        pass
+
+    @abstractclassmethod
+    def set_up_actions(self):
+        """
+        障害注入コンテナの初期設定
+        """
+        pass
+
+    @abstractclassmethod
+    def schedule_actions(self, schedule):
+        """
+        障害注入のスケジュール設定
+        """
+        pass
+
+    @abstractclassmethod
+    def collect_actions_logs(self):
+        """
+        コンテナのログから障害注入のログを収集
+        """
+        pass
+
+    @abstractclassmethod
+    def remove_actions(self):
+        """
+        障害注入コンテナの削除
+        """
+        pass
+
+    @abstractclassmethod
     def init_containers(self):
         """
-        コンテナ起動可能にするための前処理
+        コンテナ情報の初期設定
         """
         pass
 
@@ -50,21 +91,21 @@ class AbstrctController(metaclass=ABCMeta):
         pass
 
     @abstractclassmethod
-    def check_broker(self):
+    def check_broker_running(self):
         """
         brokerの状態確認処理
         """
         pass
 
     @abstractclassmethod
-    def check_publisher(self):
+    def check_publisher_running(self):
         """
         publisherの状態確認処理
         """
         pass
 
     @abstractclassmethod
-    def check_subscriber(self):
+    def check_subscriber_running(self):
         """
         subscriberの状態確認処理
         """
@@ -115,24 +156,93 @@ class Controller(AbstrctController):
         self._broker = []
         self._publisher = []
         self._subscriber = []
+        self._actions = []
 
     @property
     def duration(self):
         return utils.change_time_to_sec(self._duration)
 
+    def _set_container_node(self, container: Container):
+        """
+        コンテナの展開先のノード名と一致するノードクラスを設定する
+        """
+        node = self._node_manager.get_match_node(container.node_name)
+        if node is None:
+            raise RuntimeError(
+                f'[{container.name}]: There are no matching nodes.')
+        container.node = node
+
+    def _set_container_home(self, container: Container):
+        """
+        コンテナのコンフィグファイルや結果を保存するディレクトリを設定
+        """
+        container.home_dir = os.path.join(self._home_dir, container.name)
+        os.makedirs(container.home_dir, exist_ok=True)
+
+    def _search_container(self, container_name: str):
+        """
+        コンテナ名と一致するコンテナを返す
+        """
+        for container in self._containers:
+            if container_name == container.name:
+                return container
+        return None
+
+    def create_actions(self, actions: dict):
+        for name, action_configs in actions.items():
+            # ターゲットコンテナ毎に作成
+            target_containers = action_configs.pop('target_containers')
+            for tgt in target_containers:
+                name = f'{name}-{tgt}'
+                configs = copy.deepcopy(action_configs)
+                if action_configs['mode'] in ['delay', 'loss', 'rate']:
+                    self._actions.append(
+                        PumbaNetemContainer(name, configs, tgt))
+                else:
+                    raise NotImplementedError(
+                        f'{action_configs["mode"]} is not implemented')
+
+    def set_up_actions(self):
+        for action_container in self._actions:
+            # ターゲットのコンテナと同じノード、同じネットワークになるよう設定
+            target_container = self._search_container(action_container.target_container)
+            action_container.node_name = target_container.node_name
+            action_container.networks = target_container.networks
+            self._set_container_node(action_container)
+            # ログを保存するローカルのディレクトリを作成
+            self._set_container_home(action_container)
+        # 起動を高速にするため事前にイメージのPull処理
+        self._executre.pull_container_image(self._actions, self._node_manager)
+
+    def _deploy_action(self, action_container):
+        """
+        
+        """
+        action_container.create_commnad(self._containers)
+        self._executre.up_containers([action_container], self._node_manager, 'pumba')
+        return schedule.CancelJob
+
+    def schedule_actions(self, schedule: Scheduler):
+        # 
+        for action_container in self._actions:
+            schedule.every(action_container.start).seconds.do(
+                self._deploy_action, action_container=action_container)
+
+    def collect_actions_logs(self):
+        self._executre.collect_logs(self._actions, self._node_manager, 'pumba')
+
+    def remove_actions(self):
+        for action_container in self._actions:
+            self._executre.down_containers([action_container], self._node_manager, 'pumba')
+
     def init_containers(self):
         # コンテナを展開するノードを設定
         for container in self._containers:
-            node = self._node_manager.get_match_node(container.node_name)
-            if node is None:
-                raise RuntimeError(
-                    f'[{container.name}]: There are no matching nodes.')
-            container.node = node
+            self._set_container_node(container)
 
-        # コンテナのログや設定ファイルを保存するディレクトリを設定
+        # コンテナのログや設定ファイルを保存するローカルのディレクトリを設定
         for container in self._containers:
-            container.home_dir = os.path.join(self._home_dir, container.name)
-            os.makedirs(container.home_dir, exist_ok=True)
+            self._set_container_home(container)
 
     def initialize(self):
         # コンテナのボリュームを作成
