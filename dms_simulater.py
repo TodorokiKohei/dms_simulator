@@ -1,18 +1,19 @@
 import argparse
 import os
-import time
 import threading
+import time
 
 import schedule
 import yaml
 
+from libs.base.controllers import Controller
 from libs.kafka import KafkaController
 from libs.swarm_executer import SwarmExecuter
 from libs.utils import Node, NodeManager
 
 
 class DmsSimulator():
-    def __init__(self, controller):
+    def __init__(self, controller:Controller):
         self._controller = controller
         self._scheduler = schedule.Scheduler()
 
@@ -81,7 +82,10 @@ class DmsSimulator():
         """
         publisher,subscriberを展開し、パフォーマンステストを実行する
         """
-        # actionsの設定
+        # コンテナのIPを取得する
+        self._controller.set_container_internal_ip()
+
+        # actionsで実行するコンテナの初期設定
         self._controller.set_up_actions()
 
         # pulibhser,subscriberを展開

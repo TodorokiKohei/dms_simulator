@@ -1,7 +1,9 @@
 import os
+from typing import List
 
 import yaml
 
+from libs.base.containers import Container
 from libs.base.executers import Executer
 from libs.utils import NodeManager
 
@@ -133,3 +135,16 @@ class SwarmExecuter(Executer):
             _, log = manager.ssh_exec(f'docker service logs {service_name}')
             with open(os.path.join(container.home_dir, container.name), mode='w') as f:
                 f.writelines('\n'.join(log))
+
+    def get_container_internal_ip(self, containers: List[Container], node_manager: NodeManager):
+        nodes = set()
+        for container in containers:
+            nodes.add(container.node)
+
+        internal_ip_list = []
+        for node in nodes:
+            names, _ = node.ssh_exec('docker ps --format "{{.Names}}"')
+            for name in names:
+                ip, _ = node.ssh_exec('docker inspect -f "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}" ' + name)
+                internal_ip_list.append({'name':name.split('.')[0], 'ip':ip[0]})
+        return internal_ip_list

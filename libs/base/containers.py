@@ -52,7 +52,7 @@ class Container(AbstractContainer):
 
         self.home_dir = None
         self.node = None
-        self.inner_ip = None
+        self.internal_ip = None
 
     def create_volume_dir(self):
         """

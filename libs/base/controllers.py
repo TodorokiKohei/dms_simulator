@@ -1,15 +1,14 @@
-import os
 import copy
+import os
 from abc import ABCMeta, abstractclassmethod
 
-from schedule import Scheduler
 import schedule
-
 from libs import utils
 from libs.base.containers import Container
 from libs.base.executers import Executer
-from libs.utils import NodeManager
 from libs.pumba import PumbaNetemContainer
+from libs.utils import NodeManager
+from schedule import Scheduler
 
 
 class AbstrctController(metaclass=ABCMeta):
@@ -28,7 +27,7 @@ class AbstrctController(metaclass=ABCMeta):
         pass
 
     @abstractclassmethod
-    def schedule_actions(self, schedule):
+    def schedule_actions(self, scheduler):
         """
         障害注入のスケジュール設定
         """
@@ -139,6 +138,13 @@ class AbstrctController(metaclass=ABCMeta):
         """
         pass
 
+    @abstractclassmethod
+    def set_container_internal_ip(self):
+        """
+        全てのコンテナの内部IPを取得し、設定する
+        """
+        pass
+
 
 class Controller(AbstrctController):
     BROKER_SERVICE: str
@@ -150,7 +156,6 @@ class Controller(AbstrctController):
         self._executre = executer
         self._duration = systems['duration']
         self._home_dir = os.path.join(root_dir, 'controller')
-        self._result_dir = os.path.join(root_dir, 'results')
 
         self._containers = []
         self._broker = []
@@ -205,35 +210,47 @@ class Controller(AbstrctController):
     def set_up_actions(self):
         for action_container in self._actions:
             # ターゲットのコンテナと同じノード、同じネットワークになるよう設定
-            target_container = self._search_container(action_container.target_container)
+            target_container = self._search_container(
+                action_container.target_container)
             action_container.node_name = target_container.node_name
             action_container.networks = target_container.networks
             self._set_container_node(action_container)
+
             # ログを保存するローカルのディレクトリを作成
             self._set_container_home(action_container)
-        # 起動を高速にするため事前にイメージのPull処理
+
+            # コマンド作成
+            action_container.create_commnad(self._containers)
+
+        # 起動を高速にするため、事前にイメージのPull処理
         self._executre.pull_container_image(self._actions, self._node_manager)
 
     def _deploy_action(self, action_container):
         """
-        
+        指定された障害注入コンテナを起動する
         """
-        action_container.create_commnad(self._containers)
-        self._executre.up_containers([action_container], self._node_manager, 'pumba')
+        # action_container.create_commnad(self._containers)
+        self._executre.up_containers(
+            [action_container], self._node_manager, action_container.name)
         return schedule.CancelJob
 
-    def schedule_actions(self, schedule: Scheduler):
-        # 
+    def schedule_actions(self, scheduler: Scheduler):
+        # 障害注入コンテナをスケジューラーに登録
         for action_container in self._actions:
-            schedule.every(action_container.start).seconds.do(
+            scheduler.every(action_container.start).seconds.do(
                 self._deploy_action, action_container=action_container)
 
     def collect_actions_logs(self):
-        self._executre.collect_logs(self._actions, self._node_manager, 'pumba')
+        # 障害注入コンテナのログを回収する
+        for action_container in self._actions:
+            self._executre.collect_logs(
+                [action_container], self._node_manager, action_container.name)
 
     def remove_actions(self):
+        # 障害注入コンテナの削除
         for action_container in self._actions:
-            self._executre.down_containers([action_container], self._node_manager, 'pumba')
+            self._executre.down_containers(
+                [action_container], self._node_manager, action_container.name)
 
     def init_containers(self):
         # コンテナを展開するノードを設定
@@ -314,6 +331,15 @@ class Controller(AbstrctController):
             self._broker, self._node_manager, self.__class__.SUBSCRIBER_SERVICE)
 
     def collect_container_results(self):
-        # コンテナが出力した結果を回収する
+        # コンテナが出力したファイルを回収する
         for container in self._containers:
             container.collect_results()
+
+    def set_container_internal_ip(self):
+        internal_ip_info_list = self._executre.get_container_internal_ip(self._containers, self._node_manager)
+        for internal_ip_info in internal_ip_info_list:
+            for container in self._containers:
+                if internal_ip_info['name'].endswith(container.name):
+                    container.internal_ip = internal_ip_info['ip']
+                    break
+

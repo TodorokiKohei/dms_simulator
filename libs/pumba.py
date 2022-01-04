@@ -1,3 +1,5 @@
+from typing import List, Dict
+
 from libs import utils
 from libs.base.containers import Container
 
@@ -42,10 +44,16 @@ class PumbaNetemContainer(PumbaContainer):
     def start(self):
         return utils.change_time_to_sec(self._start)
 
-    def create_commnad(self, containers: list):
+    def create_commnad(self, containers: List[Container]):
         cmd = f'--json --log-level info netem -d {self._duration} --tc-image gaiadocker/iproute2'
-        # for dest in self._destination:
-        #     cmd += f' --target {dest}'
+        for dest in self._destination:
+            is_found = False
+            for container in containers:
+                if container.name == dest:
+                    cmd += f' --target {container.internal_ip}'
+                    is_found = True
+            if not is_found:
+                raise RuntimeError(f"Container {dest} is not found")
         cmd += f' {self._mode}'
         for param, value in self._params.items():
             cmd += f' --{param} {value}'
