@@ -16,6 +16,7 @@ class DmsSimulator():
     def __init__(self, controller:Controller):
         self._controller = controller
         self._scheduler = schedule.Scheduler()
+        self._check_count = 5
 
     def initialize(self):
         """
@@ -59,7 +60,7 @@ class DmsSimulator():
         """
         print('############### Deploying ###############')
         self._controller.deploy_broker()
-        self._check_container_running(self._controller.check_broker_running, 5)
+        self._check_container_running(self._controller.check_broker_running, self._check_count)
 
     def _collect_job(self):
         """
@@ -99,9 +100,9 @@ class DmsSimulator():
         
         # 起動確認
         self._check_container_running(
-            self._controller.check_subscriber_running, 5)
+            self._controller.check_subscriber_running, self._check_count)
         self._check_container_running(
-            self._controller.check_publisher_running, 5)
+            self._controller.check_publisher_running, self._check_count)
         print(f"-------------- Execution Time: {controller.duration} sec --------------")
 
         # 結果の回収,障害注入をスケジューラーに登録し待機する

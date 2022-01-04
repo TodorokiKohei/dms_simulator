@@ -1,5 +1,7 @@
 import copy
 import os
+import shutil
+from typing import List
 from abc import ABCMeta, abstractclassmethod
 
 import schedule
@@ -157,11 +159,11 @@ class Controller(AbstrctController):
         self._duration = systems['duration']
         self._home_dir = os.path.join(root_dir, 'controller')
 
-        self._containers = []
-        self._broker = []
-        self._publisher = []
-        self._subscriber = []
-        self._actions = []
+        self._containers: List[Container] = []
+        self._broker: List[Container] = []
+        self._publisher: List[Container] = []
+        self._subscriber: List[Container] = []
+        self._actions: List[Container] = []
 
     @property
     def duration(self):
@@ -182,6 +184,8 @@ class Controller(AbstrctController):
         コンテナのコンフィグファイルや結果を保存するディレクトリを設定
         """
         container.home_dir = os.path.join(self._home_dir, container.name)
+        if os.path.exists(container.home_dir):
+            shutil.rmtree(container.home_dir)
         os.makedirs(container.home_dir, exist_ok=True)
 
     def _search_container(self, container_name: str):
@@ -334,6 +338,7 @@ class Controller(AbstrctController):
         # コンテナが出力したファイルを回収する
         for container in self._containers:
             container.collect_results()
+            container.record_container_info()
 
     def set_container_internal_ip(self):
         internal_ip_info_list = self._executre.get_container_internal_ip(self._containers, self._node_manager)

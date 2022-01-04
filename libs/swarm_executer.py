@@ -133,7 +133,7 @@ class SwarmExecuter(Executer):
             # スタック名とコンテナ名からサービス名を作成
             service_name = f'{service}_{container.name}'
             _, log = manager.ssh_exec(f'docker service logs {service_name}')
-            with open(os.path.join(container.home_dir, container.name), mode='w') as f:
+            with open(os.path.join(container.home_dir, container.name)+'.log', mode='w') as f:
                 f.writelines('\n'.join(log))
 
     def get_container_internal_ip(self, containers: List[Container], node_manager: NodeManager):

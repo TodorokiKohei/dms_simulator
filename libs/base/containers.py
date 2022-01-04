@@ -37,6 +37,13 @@ class AbstractContainer(metaclass=ABCMeta):
         """
         pass
 
+    @abstractclassmethod
+    def record_container_info(self):
+        """
+        コンテナの情報を記録する
+        """
+        pass
+
 
 class Container(AbstractContainer):
     def __init__(self, name, image=None, node_name=None, ports=None, volumes=None, environment=None, networks=None,
@@ -100,3 +107,7 @@ class Container(AbstractContainer):
                 {'constraints': [f'node.hostname=={self.node.hostname}']}
         }
         return {self.name: swarm}
+
+    def record_container_info(self):
+        with open(f"{self.name}_internal_ip", mode="w") as f:
+            f.write(self.internal_ip)
