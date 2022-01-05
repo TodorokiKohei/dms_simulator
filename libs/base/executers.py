@@ -84,6 +84,10 @@ class Executer(AbstractExecuter):
 
         os.makedirs(self._home_dir, exist_ok=True)
 
-    def pull_container_image(self, containers, node_manager):
+    def pull_container_image(self, containers: List[Container], node_manager: NodeManager):
         for container in containers:
-            container.node.ssh_exec(f'docker pull {container.image}')
+            images_and_tags, _ = container.node.ssh_exec("docker image ls --format {{.Repository}}:{{.Tag}}")
+            images = [image_and_tag.split(":")[0] for image_and_tag in images_and_tags]
+            if container.image in images_and_tags or container.image in images:
+                continue
+            container.node.ssh_exec(f"docker pull {container.image}")

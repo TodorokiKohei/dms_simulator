@@ -1,5 +1,7 @@
+import os
 from abc import ABCMeta, abstractclassmethod
 
+from libs.utils import Node
 
 class AbstractContainer(metaclass=ABCMeta):
     @abstractclassmethod
@@ -58,7 +60,7 @@ class Container(AbstractContainer):
         self.command = command
 
         self.home_dir = None
-        self.node = None
+        self.node: Node = None
         self.internal_ip = None
 
     def create_volume_dir(self):
@@ -109,5 +111,8 @@ class Container(AbstractContainer):
         return {self.name: swarm}
 
     def record_container_info(self):
-        with open(f"{self.name}_internal_ip", mode="w") as f:
+        if self.internal_ip is None:
+            return
+        file_path = os.path.join(self.home_dir, f"{self.name}_internal_ip")
+        with open(file_path, mode="w") as f:
             f.write(self.internal_ip)

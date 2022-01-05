@@ -19,7 +19,7 @@ Base:
 
 Systems:
   type: kafka
-  duration: 1m
+  duration: 2m
   Broker:
     zookeeper:
       containers:
@@ -73,7 +73,7 @@ Systems:
           - kafka-2:9092
           - kafka-3:9092
         list:
-          - "test-topic:3:1"
+          - "test-topic:1:3"
   Publisher:
     containers:
       pub-1:
@@ -81,12 +81,15 @@ Systems:
         params:
           number: 1
           message_size: 1k
-          message_rate: 100k
+          message_rate: 150k
+          wait_time: 5s
           brokers: 
             - kafka-1:9092
             - kafka-2:9092
             - kafka-3:9092
           topic: "test-topic"
+          consistency: AT_LEAST_ONCE
+          acks: all
   Subscriber:
     containers:
       sub-1:
@@ -99,15 +102,17 @@ Systems:
             - kafka-2:9092
             - kafka-3:9092
           topic: "test-topic"
+          consistency: AT_LEAST_ONCE
 
 Actions:
   delay1:
     target_containers:
-      - kafka-1
-    start: 20s
+      - kafka-3
+    start: 30s
     duration: 20s
-    # destination:
-    #   - kafka-2
+    destination:
+      - kafka-1
+      - kafka-2
     mode: delay
     params:
-      time: 100
+      time: 50

@@ -8,7 +8,7 @@ import schedule
 from libs import utils
 from libs.base.containers import Container
 from libs.base.executers import Executer
-from libs.pumba import PumbaNetemContainer
+from libs.pumba import PumbaNetemContainer, TcContainer
 from libs.utils import NodeManager
 from schedule import Scheduler
 
@@ -36,9 +36,9 @@ class AbstrctController(metaclass=ABCMeta):
         pass
 
     @abstractclassmethod
-    def collect_actions_logs(self):
+    def collect_logs(self):
         """
-        コンテナのログから障害注入のログを収集
+        コンテナのログを収集
         """
         pass
 
@@ -162,12 +162,15 @@ class Controller(AbstrctController):
         self._executre = executer
         self._duration = systems['duration']
         self._home_dir = os.path.join(root_dir, 'controller')
+        if os.path.exists(self._home_dir):
+            shutil.rmtree(self._home_dir)
 
         self._containers: List[Container] = []
         self._broker: List[Container] = []
         self._publisher: List[Container] = []
         self._subscriber: List[Container] = []
         self._actions: List[Container] = []
+        self._tc_containers: List[Container] = []
 
     @property
     def duration(self):
@@ -209,20 +212,23 @@ class Controller(AbstrctController):
                 name = f'{name}-{tgt}'
                 configs = copy.deepcopy(action_configs)
                 if action_configs['mode'] in ['delay', 'loss', 'rate']:
-                    self._actions.append(
-                        PumbaNetemContainer(name, configs, tgt))
+                    self._actions.append(PumbaNetemContainer(name, configs, tgt))
+                    self._tc_containers.append(TcContainer())
                 else:
                     raise NotImplementedError(
                         f'{action_configs["mode"]} is not implemented')
 
     def set_up_actions(self):
-        for action_container in self._actions:
+        for action_container, tc_container in zip(self._actions, self._tc_containers):
             # ターゲットのコンテナと同じノード、同じネットワークになるよう設定
             target_container = self._search_container(
                 action_container.target_container)
             action_container.node_name = target_container.node_name
             action_container.networks = target_container.networks
             self._set_container_node(action_container)
+
+            tc_container.node_name = target_container.node_name
+            self._set_container_node(tc_container)
 
             # ログを保存するローカルのディレクトリを作成
             self._set_container_home(action_container)
@@ -232,6 +238,7 @@ class Controller(AbstrctController):
 
         # 起動を高速にするため、事前にイメージのPull処理
         self._executre.pull_container_image(self._actions, self._node_manager)
+        self._executre.pull_container_image(self._tc_containers, self._node_manager)
 
     def _deploy_action(self, action_container):
         """
@@ -248,8 +255,10 @@ class Controller(AbstrctController):
             scheduler.every(action_container.start).seconds.do(
                 self._deploy_action, action_container=action_container)
 
-    def collect_actions_logs(self):
-        # 障害注入コンテナのログを回収する
+    def collect_logs(self):
+        # コンテナのログを回収する
+        self._executre.collect_logs(self._publisher, self._node_manager, self.PUBLISHER_SERVICE)
+        self._executre.collect_logs(self._subscriber, self._node_manager, self.SUBSCRIBER_SERVICE)
         for action_container in self._actions:
             self._executre.collect_logs(
                 [action_container], self._node_manager, action_container.name)
@@ -271,19 +280,19 @@ class Controller(AbstrctController):
 
     def initialize(self):
         # コンテナのボリュームを作成
-        for container in self._containers:
-            container.create_volume_dir()
+        # for container in self._containers:
+        #     container.create_volume_dir()
 
         # executerの初期化処理
         self._executre.create_remote_dir(self._containers, self._node_manager)
         self._executre.create_cluster(self._containers, self._node_manager)
-        self._executre.pull_container_image(
-            self._containers, self._node_manager)
+        # self._executre.pull_container_image(
+        #     self._containers, self._node_manager)
 
     def clean(self):
         # コンテナのボリュームを削除
-        for container in self._containers:
-            container.delete_volume_dir()
+        # for container in self._containers:
+        #     container.delete_volume_dir()
         # executerの掃除処理
         self._executre.delete_cluster(self._containers, self._node_manager)
 
@@ -291,6 +300,9 @@ class Controller(AbstrctController):
         # brokerコンテナを展開
         print('------------Deploy broker containers------------')
         print(f"create {self.__class__.BROKER_SERVICE}")
+        for container in self._broker:
+            container.create_volume_dir()
+        self._executre.pull_container_image(self._broker, self._node_manager)
         self._executre.up_containers(
             self._broker, self._node_manager, self.__class__.BROKER_SERVICE)
 
@@ -298,6 +310,9 @@ class Controller(AbstrctController):
         # publisherコンテナを展開
         print('------------Deploy publisher containers------------')
         print(f"create {self.__class__.PUBLISHER_SERVICE}")
+        for container in self._publisher:
+            container.create_volume_dir()
+        self._executre.pull_container_image(self._publisher, self._node_manager)
         self._executre.up_containers(
             self._publisher, self._node_manager, self.__class__.PUBLISHER_SERVICE)
 
@@ -305,6 +320,9 @@ class Controller(AbstrctController):
         # subscriberコンテナを展開
         print('------------Deploy subscriber containers------------')
         print(f"create {self.__class__.SUBSCRIBER_SERVICE}")
+        for container in self._subscriber:
+            container.create_volume_dir()
+        self._executre.pull_container_image(self._subscriber, self._node_manager)
         self._executre.up_containers(
             self._subscriber, self._node_manager, self.__class__.SUBSCRIBER_SERVICE)
 
@@ -325,18 +343,24 @@ class Controller(AbstrctController):
         print(f"remove {self.__class__.BROKER_SERVICE}")
         self._executre.down_containers(
             self._broker, self._node_manager, self.__class__.BROKER_SERVICE)
+        for container in self._broker:
+            container.delete_volume_dir()
 
     def remove_publisher(self):
         # publisherの削除を行う
         print(f"remove {self.__class__.PUBLISHER_SERVICE}")
         self._executre.down_containers(
-            self._broker, self._node_manager, self.__class__.PUBLISHER_SERVICE)
+            self._publisher, self._node_manager, self.__class__.PUBLISHER_SERVICE)
+        for container in self._publisher:
+            container.delete_volume_dir()
 
     def remove_subscriber(self):
         # subscriberの削除を行う
         print(f"remove {self.__class__.SUBSCRIBER_SERVICE}")
         self._executre.down_containers(
-            self._broker, self._node_manager, self.__class__.SUBSCRIBER_SERVICE)
+            self._subscriber, self._node_manager, self.__class__.SUBSCRIBER_SERVICE)
+        for container in self._subscriber:
+            container.delete_volume_dir()
 
     def collect_container_results(self):
         # コンテナが出力したファイルを回収する

@@ -4,22 +4,35 @@ from libs import utils
 from libs.base.containers import Container
 
 
+class TcContainer(Container):
+    def __init__(self):
+        super().__init__(name="tc-image", image="gaiadocker/iproute2")
+        
+    def pre_up_process(self):
+        # 起動前に実行する処理なし
+        pass
+
+    def collect_results(self):
+        # 収集する処理なし
+        pass
+
+
 class PumbaContainer(Container):
     def to_swarm(self):
         swarm = super().to_swarm()
         restart_policy = {
             'condition': 'on-failure'
         }
-        swarm[self.name]['deploy'].update({'restart_policy': restart_policy}) 
+        swarm[self.name]['deploy'].update({'restart_policy': restart_policy})
         return swarm
 
     def pre_up_process(self):
         # 起動前に実行する処理なし
-        pass 
+        pass
 
     def collect_results(self):
         # 収集する処理なし
-        pass  
+        pass
 
 
 class PumbaNetemContainer(PumbaContainer):

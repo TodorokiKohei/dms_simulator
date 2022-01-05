@@ -16,14 +16,26 @@ class DmsSimulator():
     def __init__(self, controller:Controller):
         self._controller = controller
         self._scheduler = schedule.Scheduler()
-        self._check_count = 5
+        self._check_count = 10
+
+    def open(self):
+        self._io = open("execute_time.log", mode="a")
+        self._io.write(f"--------------------------------------------------\n")
+
+    def close(self):
+        self._io.write(f"**************************************************\n")
+        self._io.close()
 
     def initialize(self):
         """
         コントローラーを介した初期設定
         """
         print('############### Initializing ###############')
+        start_time = time.perf_counter()
         self._controller.initialize()
+        end_time = time.perf_counter()
+        self._io.write(f"Initialize Time: {end_time-start_time} sec\n")
+
 
     def _check_container_running(self, check_function, nums):
         """
@@ -59,8 +71,12 @@ class DmsSimulator():
         brokerを展開し、コンテナが起動しているかを確認する
         """
         print('############### Deploying ###############')
+        start_time = time.perf_counter()
+        self._controller.remove_broker()
         self._controller.deploy_broker()
         self._check_container_running(self._controller.check_broker_running, self._check_count)
+        end_time = time.perf_counter()
+        self._io.write(f"Deploy Broker Time: {end_time-start_time} sec\n")
         self._controller.create_topics()
 
     def _collect_job(self):
@@ -76,8 +92,11 @@ class DmsSimulator():
             if self._check_container_down(self._controller.check_publisher_running):
                 break
             time.sleep(1)
+        start_time = time.perf_counter()
         self._controller.collect_container_results()
-        self._controller.collect_actions_logs()
+        self._controller.collect_logs()
+        end_time = time.perf_counter()
+        self._io.write(f"Collect Result Time: {end_time-start_time} sec\n")
         return schedule.CancelJob
 
     def test_performance(self):
@@ -96,12 +115,15 @@ class DmsSimulator():
 
         # pulibhser,subscriberを展開
         print('############### Test perfomance ###############')
-        thread_pub = threading.Thread(target=self._controller.deploy_subscriber)
+        start_time = time.perf_counter()
         thread_sub = threading.Thread(target=self._controller.deploy_publisher)
-        thread_pub.start()
+        thread_pub = threading.Thread(target=self._controller.deploy_subscriber)
         thread_sub.start()
-        thread_pub.join()
+        thread_pub.start()
         thread_sub.join()
+        thread_pub.join()
+        end_time = time.perf_counter()
+        self._io.write(f"Deploy Publisher And Subscriber Time: {end_time-start_time} sec\n")
         
         # 起動確認
         self._check_container_running(
@@ -127,11 +149,14 @@ class DmsSimulator():
         展開した環境を削除する
         """
         print('############### Cleaning ###############')
+        start_time = time.perf_counter()
         self._controller.remove_broker()
         self._controller.remove_publisher()
         self._controller.remove_subscriber()
         self._controller.remove_actions()
         self._controller.clean()
+        end_time = time.perf_counter()
+        self._io.write(f"Clean Time: {end_time-start_time} sec\n")
 
     def run(self):
         """
@@ -188,6 +213,7 @@ if __name__ == "__main__":
 
     # シミュレーションにコントローラーを設定し実行する
     ds = DmsSimulator(controller)
+    ds.open()
     if args.mode == 'run':
         ds.run()
     elif args.mode == 'init':
@@ -198,3 +224,4 @@ if __name__ == "__main__":
         ds.test_performance()
     elif args.mode == 'clean':
         ds.clean()
+    ds.close()

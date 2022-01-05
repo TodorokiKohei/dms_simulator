@@ -179,7 +179,7 @@ class KafkaPubContainer(KafkaClientContainer):
     SERVICE = 'publisher'
     CLIENT_COMMAND = 'python publisher.py'
     REQUIRE_CONFIGS = ['duration', 'number', 'message_size']
-    ARBITRARY_CONFIGS = ['message_rate']
+    ARBITRARY_CONFIGS = ['message_rate', 'wait_time']
 
     def _convert_configs(self):
         self._configs['duration'] = utils.change_time_to_sec(
@@ -189,17 +189,23 @@ class KafkaPubContainer(KafkaClientContainer):
         if 'message_rate' in self._configs.keys():
             self._configs['message_rate'] = utils.change_size_to_byte(
                 self._configs['message_rate'])
+        if 'wait_time' in self._configs.keys():
+            self._configs['wait_time'] = utils.change_time_to_sec(
+                self._configs['wait_time'])
 
 
 class KafkaSubContainer(KafkaClientContainer):
     SERVICE = 'subscriber'
     CLIENT_COMMAND = 'python subscriber.py'
     REQUIRE_CONFIGS = ['duration', 'number']
-    ARBITRARY_CONFIGS = ['record_message']
+    ARBITRARY_CONFIGS = ['record_message', 'wait_time']
 
     def _convert_configs(self):
         self._configs['duration'] = utils.change_time_to_sec(
             self._configs['duration'])
+        if 'wait_time' in self._configs.keys():
+            self._configs['wait_time'] = utils.change_time_to_sec(
+                self._configs['wait_time'])
 
 
 class KafkaTopics(Container):
@@ -271,7 +277,6 @@ class KafkaController(Controller):
             topic_container = KafkaTopics("kafka-topics", systems["Broker"]["topics"])
             topic_container.node_name = self._broker[0].node_name
             topic_container.networks = self._broker[0].networks
-            print(topic_container.command)
             self._topic_container = [topic_container]
             self._containers.extend(self._topic_container)
 

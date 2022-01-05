@@ -34,14 +34,23 @@ def convert_logs():
         with open(f) as ff:
             j = []
             lines = ff.read().splitlines()
+            result = {}
             for l in lines:
                 index = l.find('|')
-                j.append(json.loads(l[index+2:]))
-                dt = datetime.strptime(j[-1]['time'], "%Y-%m-%dT%H:%M:%S%z")
-                j[-1]['time'] = dt.strftime('%Y-%m-%d %H:%M:%S%z')
+                dct = json.loads(l[index+2:])
+                if "running" in dct["msg"]:
+                    result[dct["name"]] = {}
+                    result[dct["name"]]["start_time"] = dct["time"]
+                elif "stopping" in dct["msg"]:
+                    result[dct["name"]]["end_time"] = dct["time"]
+                else:
+                    raise RuntimeError(f"Unexpected error : {dct['msg'] }")
+                # j.append(json.loads(l[index+2:]))
+                # dt = datetime.strptime(j[-1]['time'], "%Y-%m-%dT%H:%M:%S%z")
+                # j[-1]['time'] = dt.strftime('%Y-%m-%d %H:%M:%S%z')
         json_file = os.path.join(result_dir, os.path.splitext(os.path.basename(f))[0]+'.json')
         with open(json_file, mode="w") as ff:
-            json.dump(j, ff, indent=4)
+            json.dump(result, ff, indent=4)
 
 
 def add_failure_time(fig: Figure, ax: Axes, failure_logs):
@@ -75,51 +84,58 @@ def plot_results():
     failure_logs = []
     for f in log_files:
         with open(f) as ff:
-            log = json.load(ff)            
-            start_time = (pd.to_datetime(log[0]["time"], format="%Y-%m-%d %H:%M:%S%z").tz_convert("Asia/Tokyo") - df_msg['sent_time'][0]).total_seconds()
-            end_time = (pd.to_datetime(log[1]["time"], format="%Y-%m-%d %H:%M:%S%z").tz_convert("Asia/Tokyo") - df_msg['sent_time'][0]).total_seconds()
-            container = log[0]["name"].split(".")[0]
-            failure_logs.append({
-                "container": container,
-                "start_time": start_time,
-                "end_time": end_time
-            })
+            log = json.load(ff)     
+            for key, val in log.items():       
+                start_time = (pd.to_datetime(val["start_time"], format="%Y-%m-%dT%H:%M:%S%z").tz_convert("Asia/Tokyo") - df_msg['sent_time'][0]).total_seconds()
+                end_time = (pd.to_datetime(val["end_time"], format="%Y-%m-%dT%H:%M:%S%z").tz_convert("Asia/Tokyo") - df_msg['sent_time'][0]).total_seconds()
+                container = key.split(".")[0]
+                failure_logs.append({
+                    "container": container,
+                    "start_time": start_time,
+                    "end_time": end_time
+                })
 
     fig, ax = plt.subplots()
+    fig.subplots_adjust(left=0.14)
 
     # レイテンシーを描画
     latency = (df_msg['receive_time'] - df_msg['sent_time']).dt.total_seconds()
-    ax.plot(df_msg['time_from_sent_start'], latency)
+    ax.plot(df_msg['time_from_sent_start'], latency, marker="o", markersize=4, linestyle="None")
     ax.set_ylabel('latency [sec]')
     ax.set_xlabel('elapsed time [sec]')
+    ax.set_title(title)
     add_failure_time(fig, ax, failure_logs)
-    # plt.ylim([0, 10])
+    plt.ylim([0, 0.35])
     fig.savefig(os.path.join(result_dir, 'latency.png'))
     ax.cla()
 
     # Publisherのレートを描画
     ax.plot((df_pub['LOGTIME']-df_pub['LOGTIME'][0]).dt.total_seconds(), df_pub['MESSAGE_BYTES_TOTAL'])
-    ax.set_ylabel('publish rate [bps]')
+    ax.set_ylabel('publish rate [B/sec]')
     ax.set_xlabel('elapsed time [sec]')
+    ax.set_title(title)
     add_failure_time(fig, ax, failure_logs)
-    # plt.ylim([0, 110000])
+    plt.ylim([0, 160000])
     fig.savefig(os.path.join(result_dir, 'pub_rate.png'))
     ax.cla()
 
     # Subscriberのレートを描画
     ax.plot((df_sub['LOGTIME']-df_sub['LOGTIME'][0]).dt.total_seconds(), df_sub['MESSAGE_BYTES_TOTAL'])
-    ax.set_ylabel('subscribe rate [bps]')
+    ax.set_ylabel('subscribe rate [B/sec]')
     ax.set_xlabel('elapsed time [sec]')
+    ax.set_title(title)
     add_failure_time(fig, ax, failure_logs)
-    # plt.ylim([0, 110000])
+    plt.ylim([0, 160000])
     fig.savefig(os.path.join(result_dir, 'sub_rate.png'))
     ax.cla()
 
     # Publisherのメッセージの送信間隔を描画
+    df_msg_pub = df_msg.sort_values("sent_time")
     pub_message_diff = df_msg['sent_time'].diff().dropna().dt.total_seconds()
     ax.plot(df_msg['time_from_sent_start'].iloc[:-1], pub_message_diff)
     ax.set_ylabel('message interval [sec]')
     ax.set_xlabel('elapsed time [sec]')
+    ax.set_title(title)
     add_failure_time(fig, ax, failure_logs)
     fig.savefig(os.path.join(result_dir, 'pub_message_diff.png'))
     ax.cla()
@@ -129,6 +145,7 @@ def plot_results():
     ax.plot(df_msg['time_from_recv_start'].iloc[:-1], sub_message_diff)
     ax.set_ylabel('message interval [sec]')
     ax.set_xlabel('elapsed time [sec]')
+    ax.set_title(title)
     add_failure_time(fig, ax, failure_logs)
     # plt.ylim([0, 5])
     fig.savefig(os.path.join(result_dir, 'sub_message_diff.png'))
@@ -137,12 +154,18 @@ def plot_results():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--dir')
+    parser.add_argument('--title')
     args = parser.parse_args()
     if args.dir is None:
         result_dir = os.path.join('results', datetime.now().strftime("%Y%m%d_%H%M"))
     else:
         result_dir = os.path.join('results', args.dir)
     os.makedirs(result_dir, exist_ok=True)
+
+    if args.title is None:
+        title = ""
+    else:
+        title = args.title
     # collect_results()
-    convert_logs()
+    # convert_logs()
     plot_results()
