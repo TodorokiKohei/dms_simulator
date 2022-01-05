@@ -61,6 +61,7 @@ class DmsSimulator():
         print('############### Deploying ###############')
         self._controller.deploy_broker()
         self._check_container_running(self._controller.check_broker_running, self._check_count)
+        self._controller.create_topics()
 
     def _collect_job(self):
         """
@@ -89,6 +90,10 @@ class DmsSimulator():
         # actionsで実行するコンテナの初期設定
         self._controller.set_up_actions()
 
+        # publisher, subscriberコンテナを削除
+        self._controller.remove_publisher()
+        self._controller.remove_subscriber()
+
         # pulibhser,subscriberを展開
         print('############### Test perfomance ###############')
         thread_pub = threading.Thread(target=self._controller.deploy_subscriber)
@@ -114,9 +119,7 @@ class DmsSimulator():
             self._scheduler.run_pending()
             time.sleep(1)
 
-        # publisher, subscriber, actionsコンテナを削除
-        self._controller.remove_publisher()
-        self._controller.remove_subscriber()
+        # actionsコンテナを削除
         self._controller.remove_actions()
 
     def clean(self):

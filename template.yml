@@ -28,6 +28,16 @@ Systems:
           environment:
             ZOOKEEPER_CLIENT_PORT: 2181
             ZOOKEEPER_TICK_TIME: 2000
+        zoo-2:
+          node_name: broker-2
+          environment:
+            ZOOKEEPER_CLIENT_PORT: 2181
+            ZOOKEEPER_TICK_TIME: 2000
+        zoo-3:
+          node_name: broker-3
+          environment:
+            ZOOKEEPER_CLIENT_PORT: 2181
+            ZOOKEEPER_TICK_TIME: 2000
     kafka:
       containers:
         kafka-1:
@@ -40,25 +50,30 @@ Systems:
             KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
             KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
             KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-        # kafka-2:
-        #   node_name: broker-2
-        #   environment:
-        #     KAFKA_BROKER_ID: 2
-        #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
-        #     KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka-2:9092
-        #     KAFKA_ZOOKEEPER_CONNECT: zoo-1:2181
-        #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
-        #     KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
-        # kafka-3:
-        #   node_name: broker-3
-        #   environment:
-        #     KAFKA_BROKER_ID: 3
-        #     KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka-3:9092
-        #     KAFKA_ZOOKEEPER_CONNECT: zoo-1:2181
-        #     KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
-        #     KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
-      topics:
-          - "partition-3-1:3:1"
+        kafka-2:
+          node_name: broker-2
+          environment:
+            KAFKA_BROKER_ID: 2
+            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
+            KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka-2:9092
+            KAFKA_ZOOKEEPER_CONNECT: zoo-1:2181
+            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
+            KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+        kafka-3:
+          node_name: broker-3
+          environment:
+            KAFKA_BROKER_ID: 3
+            KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka-3:9092
+            KAFKA_ZOOKEEPER_CONNECT: zoo-1:2181
+            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
+            KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+    topics:
+        brokers:
+          - kafka-1:9092
+          - kafka-2:9092
+          - kafka-3:9092
+        list:
+          - "test-topic:3:1"
   Publisher:
     containers:
       pub-1:
@@ -69,9 +84,9 @@ Systems:
           message_rate: 100k
           brokers: 
             - kafka-1:9092
-            # - kafka-2:9092
-            # - kafka-3:9092
-          topic: "partition-3-1"
+            - kafka-2:9092
+            - kafka-3:9092
+          topic: "test-topic"
   Subscriber:
     containers:
       sub-1:
@@ -81,16 +96,18 @@ Systems:
           record_message: true
           brokers: 
             - kafka-1:9092
-            # - kafka-2:9092
-            # - kafka-3:9092
-          topic: "partition-3-1"
+            - kafka-2:9092
+            - kafka-3:9092
+          topic: "test-topic"
 
-# Actions:
-  # delay1:
-  #   target_containers:
-  #     - kafka-1
-  #   start: 20s
-  #   duration: 20s
-  #   mode: delay
-  #   params:
-  #     time: 100
+Actions:
+  delay1:
+    target_containers:
+      - kafka-1
+    start: 20s
+    duration: 20s
+    # destination:
+    #   - kafka-2
+    mode: delay
+    params:
+      time: 100

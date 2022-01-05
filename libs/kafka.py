@@ -1,5 +1,5 @@
 import os
-import re
+import time
 from abc import abstractclassmethod
 
 import yaml
@@ -104,7 +104,7 @@ class KafkaClientContainer(Container):
                 'target': '/code/results'
             }
         ]
-        configs['command'] = self.__class__.CLIENT_COMMAND 
+        configs['command'] = self.__class__.CLIENT_COMMAND
 
         # paramsをconfigsから除き, コンストラクタを実行
         params = configs.pop('params')
@@ -113,7 +113,6 @@ class KafkaClientContainer(Container):
         # paramsから実行に必要なconfigを作成
         self._set_configs(params)
         self._convert_configs()
-        
 
     def _set_configs(self, params: dict):
         """
@@ -203,6 +202,36 @@ class KafkaSubContainer(KafkaClientContainer):
             self._configs['duration'])
 
 
+class KafkaTopics(Container):
+    def __init__(self, name: str, configs: dict):
+        configs["image"] = 'confluentinc/cp-kafka:5.5.6'
+        configs["command"] = ""
+        brokers = configs.pop("brokers")
+        topic_list = configs.pop("list")
+        for topic in topic_list:
+            topic_name, partitions, replication_factor = topic.split(':')
+            cmd = f"kafka-topics --bootstrap-server {','.join(brokers)} --topic {topic_name} --partitions {partitions} --replication-factor {replication_factor} --create"
+            if configs["command"] != "":
+                configs["command"] += " && "
+            configs["command"] += cmd
+        super().__init__(name, **configs)
+
+    def collect_results(self):
+        pass
+
+    def pre_up_process(self):
+        pass
+
+    def to_swarm(self):
+        # 終了後に再起動しないようにエラー時のみ再起動するよう設定
+        swarm = super().to_swarm()
+        restart_policy = {
+            'condition': 'none'
+        }
+        swarm[self.name]['deploy'].update({'restart_policy': restart_policy})
+        return swarm
+
+
 class KafkaController(Controller):
     BROKER_SERVICE = 'kafka-broker'
     PUBLISHER_SERVICE = 'kafka-publihser'
@@ -238,13 +267,14 @@ class KafkaController(Controller):
         self._containers.extend(self._subscriber)
 
         # 作成するトピックの情報を作成
-        self._topics = []
         if 'topics' in systems['Broker']:
-            for topic_info in systems['Broker']['topics']:
-                topic_name, partitions, replication_factor = topic_info.split(
-                    ':')
-                self._topics.append(topic={
-                    'topic': topic_name,
-                    'partitions': partitions,
-                    'replication-factor': replication_factor
-                })
+            topic_container = KafkaTopics("kafka-topics", systems["Broker"]["topics"])
+            topic_container.node_name = self._broker[0].node_name
+            topic_container.networks = self._broker[0].networks
+            print(topic_container.command)
+            self._topic_container = [topic_container]
+            self._containers.extend(self._topic_container)
+
+    def create_topics(self):
+        self._executre.up_containers(self._topic_container, self._node_manager, "kafka-topics")
+        # self._executre.down_containers(self._topic_container, self._node_manager, "kafka-topics")

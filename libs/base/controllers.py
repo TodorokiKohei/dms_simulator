@@ -147,6 +147,10 @@ class AbstrctController(metaclass=ABCMeta):
         """
         pass
 
+    @abstractclassmethod
+    def create_topics(self):
+        pass
+
 
 class Controller(AbstrctController):
     BROKER_SERVICE: str
