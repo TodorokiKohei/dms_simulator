@@ -1,8 +1,8 @@
-Base:
-  User: todoroki
-  Keyfile: $KEYFILE
-  Sudopass: $SUDOPASS
-  Nodes:
+base:
+  user: todoroki
+  keyfile: $KEYFILE
+  sudopass: $SUDOPASS
+  nodes:
     publisher-1:
       address: 10.20.22.158
     subscriber-1:
@@ -17,56 +17,57 @@ Base:
       address: 10.20.22.164
       is_manager: true
 
-Systems:
+systems:
   type: kafka
   duration: 2m
-  Broker:
+  broker:
     zookeeper:
-      containers:
-        zoo-1:
-          node_name: broker-1
-          environment:
-            ZOOKEEPER_CLIENT_PORT: 2181
-            ZOOKEEPER_TICK_TIME: 2000
-        zoo-2:
-          node_name: broker-2
-          environment:
-            ZOOKEEPER_CLIENT_PORT: 2181
-            ZOOKEEPER_TICK_TIME: 2000
-        zoo-3:
-          node_name: broker-3
-          environment:
-            ZOOKEEPER_CLIENT_PORT: 2181
-            ZOOKEEPER_TICK_TIME: 2000
+      zoo-1:
+        node_name: broker-1
+        environment:
+          ZOOKEEPER_CLIENT_PORT: 2181
+          ZOOKEEPER_TICK_TIME: 2000
+      zoo-2:
+        node_name: broker-2
+        environment:
+          ZOOKEEPER_CLIENT_PORT: 2181
+          ZOOKEEPER_TICK_TIME: 2000
+      zoo-3:
+        node_name: broker-3
+        environment:
+          ZOOKEEPER_CLIENT_PORT: 2181
+          ZOOKEEPER_TICK_TIME: 2000
     kafka:
-      containers:
-        kafka-1:
-          node_name: broker-1
-          environment:
-            KAFKA_BROKER_ID: 1
-            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
-            KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka-1:9092
-            KAFKA_ZOOKEEPER_CONNECT: zoo-1:2181
-            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
-            KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
-            KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-        kafka-2:
-          node_name: broker-2
-          environment:
-            KAFKA_BROKER_ID: 2
-            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
-            KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka-2:9092
-            KAFKA_ZOOKEEPER_CONNECT: zoo-1:2181
-            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
-            KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
-        kafka-3:
-          node_name: broker-3
-          environment:
-            KAFKA_BROKER_ID: 3
-            KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka-3:9092
-            KAFKA_ZOOKEEPER_CONNECT: zoo-1:2181
-            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
-            KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      kafka-1:
+        node_name: broker-1
+        environment:
+          KAFKA_BROKER_ID: 1
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
+          KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka-1:9092
+          KAFKA_ZOOKEEPER_CONNECT: zoo-1:2181,zoo-2:2181,zoo-3:2181
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
+          KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+          KAFKA_AUTO_CREATE_TOPICS_ENABLE: false
+          # KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      kafka-2:
+        node_name: broker-2
+        environment:
+          KAFKA_BROKER_ID: 2
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
+          KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka-2:9092
+          KAFKA_ZOOKEEPER_CONNECT: zoo-1:2181,zoo-2:2181,zoo-3:2181
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
+          KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+          KAFKA_AUTO_CREATE_TOPICS_ENABLE: false
+      kafka-3:
+        node_name: broker-3
+        environment:
+          KAFKA_BROKER_ID: 3
+          KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka-3:9092
+          KAFKA_ZOOKEEPER_CONNECT: zoo-1:2181,zoo-2:2181,zoo-3:2181
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT
+          KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+          KAFKA_AUTO_CREATE_TOPICS_ENABLE: false
     topics:
         brokers:
           - kafka-1:9092
@@ -74,45 +75,45 @@ Systems:
           - kafka-3:9092
         list:
           - "test-topic:1:3"
-  Publisher:
-    containers:
-      pub-1:
-        node_name: publisher-1
-        params:
-          number: 1
-          message_size: 1k
-          message_rate: 150k
-          wait_time: 5s
-          brokers: 
-            - kafka-1:9092
-            - kafka-2:9092
-            - kafka-3:9092
-          topic: "test-topic"
-          consistency: AT_LEAST_ONCE
-          acks: all
-  Subscriber:
-    containers:
-      sub-1:
-        node_name: subscriber-1
-        params:
-          number: 1
-          record_message: true
-          brokers: 
-            - kafka-1:9092
-            - kafka-2:9092
-            - kafka-3:9092
-          topic: "test-topic"
-          consistency: AT_LEAST_ONCE
+  publisher:
+    pub-1:
+      node_name: publisher-1
+      params:
+        number: 1
+        message_size: 1k
+        message_rate: 300k
+        # wait_time: 5s
+        brokers: 
+          - kafka-1:9092
+          - kafka-2:9092
+          - kafka-3:9092
+        topic: "test-topic"
+        consistency: AT_LEAST_ONCE
+        acks: all
+        # linger_ms: 10
+        # batch_size: 9900
+  subscriber:
+    sub-1:
+      node_name: subscriber-1
+      params:
+        number: 1
+        record_message: true
+        brokers: 
+          - kafka-1:9092
+          - kafka-2:9092
+          - kafka-3:9092
+        topic: "test-topic"
+        consistency: AT_LEAST_ONCE
 
-Actions:
+actions:
   delay1:
     target_containers:
-      - kafka-3
+      - kafka-2
     start: 30s
     duration: 20s
     destination:
       - kafka-1
-      - kafka-2
+      - kafka-3
     mode: delay
     params:
       time: 50

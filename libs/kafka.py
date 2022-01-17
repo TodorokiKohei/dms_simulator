@@ -247,23 +247,23 @@ class KafkaController(Controller):
         super().__init__(node_manager, executer, systems, root_dir)
 
         # Brokerのコンテナ情報の作成
-        zoo_info = systems['Broker']['zookeeper']
-        for name, configs in zoo_info['containers'].items():
+        zoo_info = systems['broker']['zookeeper']
+        for name, configs in zoo_info.items():
             self._broker.append(ZookeeperContainer(name, configs))
-        kafka_info = systems['Broker']['kafka']
-        for name, configs in kafka_info['containers'].items():
+        kafka_info = systems['broker']['kafka']
+        for name, configs in kafka_info.items():
             self._broker.append(KafkaContainer(name, configs))
 
         # Publisherのコンテナ情報の作成
-        pub_info = systems['Publisher']
-        for name, configs in pub_info['containers'].items():
+        pub_info = systems['publisher']
+        for name, configs in pub_info.items():
             if 'duration' not in configs['params'].keys():
                 configs['params']['duration'] = systems['duration']
             self._publisher.append(KafkaPubContainer(name, configs))
 
         # Subscriberのコンテナ情報の作成
-        sub_info = systems['Subscriber']
-        for name, configs in sub_info['containers'].items():
+        sub_info = systems['subscriber']
+        for name, configs in sub_info.items():
             if 'duration' not in configs['params'].keys():
                 configs['params']['duration'] = systems['duration']
             self._subscriber.append(KafkaSubContainer(name, configs))
@@ -273,8 +273,8 @@ class KafkaController(Controller):
         self._containers.extend(self._subscriber)
 
         # 作成するトピックの情報を作成
-        if 'topics' in systems['Broker']:
-            topic_container = KafkaTopics("kafka-topics", systems["Broker"]["topics"])
+        if 'topics' in systems['broker']:
+            topic_container = KafkaTopics("kafka-topics", systems["broker"]["topics"])
             topic_container.node_name = self._broker[0].node_name
             topic_container.networks = self._broker[0].networks
             self._topic_container = [topic_container]

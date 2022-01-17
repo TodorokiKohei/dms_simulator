@@ -105,7 +105,7 @@ def plot_results():
     ax.set_xlabel('elapsed time [sec]')
     ax.set_title(title)
     add_failure_time(fig, ax, failure_logs)
-    plt.ylim([0, 0.35])
+    # plt.ylim([0, 0.35])
     fig.savefig(os.path.join(result_dir, 'latency.png'))
     ax.cla()
 
@@ -115,7 +115,7 @@ def plot_results():
     ax.set_xlabel('elapsed time [sec]')
     ax.set_title(title)
     add_failure_time(fig, ax, failure_logs)
-    plt.ylim([0, 160000])
+    # plt.ylim([0, 160000])
     fig.savefig(os.path.join(result_dir, 'pub_rate.png'))
     ax.cla()
 
@@ -125,7 +125,7 @@ def plot_results():
     ax.set_xlabel('elapsed time [sec]')
     ax.set_title(title)
     add_failure_time(fig, ax, failure_logs)
-    plt.ylim([0, 160000])
+    # plt.ylim([0, 160000])
     fig.savefig(os.path.join(result_dir, 'sub_rate.png'))
     ax.cla()
 
@@ -166,6 +166,6 @@ if __name__ == '__main__':
         title = ""
     else:
         title = args.title
-    # collect_results()
-    # convert_logs()
+    collect_results()
+    convert_logs()
     plot_results()
