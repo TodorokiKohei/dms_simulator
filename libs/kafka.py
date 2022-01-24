@@ -208,36 +208,6 @@ class KafkaSubContainer(KafkaClientContainer):
                 self._configs['wait_time'])
 
 
-class KafkaTopics(Container):
-    def __init__(self, name: str, configs: dict):
-        configs["image"] = 'confluentinc/cp-kafka:5.5.6'
-        configs["command"] = ""
-        brokers = configs.pop("brokers")
-        topic_list = configs.pop("list")
-        for topic in topic_list:
-            topic_name, partitions, replication_factor = topic.split(':')
-            cmd = f"kafka-topics --bootstrap-server {','.join(brokers)} --topic {topic_name} --partitions {partitions} --replication-factor {replication_factor} --create"
-            if configs["command"] != "":
-                configs["command"] += " && "
-            configs["command"] += cmd
-        super().__init__(name, **configs)
-
-    def collect_results(self):
-        pass
-
-    def pre_up_process(self):
-        pass
-
-    def to_swarm(self):
-        # 終了後に再起動しないようにエラー時のみ再起動するよう設定
-        swarm = super().to_swarm()
-        restart_policy = {
-            'condition': 'none'
-        }
-        swarm[self.name]['deploy'].update({'restart_policy': restart_policy})
-        return swarm
-
-
 class KafkaController(Controller):
     BROKER_SERVICE = 'kafka-broker'
     PUBLISHER_SERVICE = 'kafka-publihser'
@@ -272,14 +242,29 @@ class KafkaController(Controller):
         self._containers.extend(self._publisher)
         self._containers.extend(self._subscriber)
 
-        # 作成するトピックの情報を作成
-        if 'topics' in systems['broker']:
-            topic_container = KafkaTopics("kafka-topics", systems["broker"]["topics"])
-            topic_container.node_name = self._broker[0].node_name
-            topic_container.networks = self._broker[0].networks
-            self._topic_container = [topic_container]
-            self._containers.extend(self._topic_container)
+        # 作成するトピックの情報
+        if "topics" in systems["broker"]:
+            self._topic_info = systems["broker"]["topics"]
 
     def create_topics(self):
-        self._executre.up_containers(self._topic_container, self._node_manager, "kafka-topics")
-        # self._executre.down_containers(self._topic_container, self._node_manager, "kafka-topics")
+        brokers = self._topic_info["brokers"]
+        topic_list = self._topic_info["list"]
+        topic_create_cmd = ""
+        topic_describe_cmd = ""
+        for topic in topic_list:
+            topic_name, partitions, replication_factor = topic.split(':')
+            cmd = f"kafka-topics --bootstrap-server {','.join(brokers)} --topic {topic_name} --partitions {partitions} --replication-factor {replication_factor} --create"
+            if topic_create_cmd != "":
+                topic_create_cmd += " && "
+            topic_create_cmd += cmd
+
+            cmd = f"kafka-topics --bootstrap-server {','.join(brokers)} --topic {topic_name} --describe"
+            if topic_describe_cmd != "":
+                topic_describe_cmd += " && "
+            topic_describe_cmd += cmd
+
+        for container in self._broker:
+            if isinstance(container, KafkaContainer):
+                kafka = container
+                break
+        self._executre.create_topics(kafka, topic_create_cmd, topic_describe_cmd)

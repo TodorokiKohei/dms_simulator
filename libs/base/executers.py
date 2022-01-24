@@ -41,7 +41,7 @@ class AbstractExecuter(metaclass=ABCMeta):
         pass
 
     @abstractclassmethod
-    def down_containers(self, containers: List[Container], node_manager: NodeManager, service: str):
+    def down_containers(self, containers: List[Container], node_manager: NodeManager, service: str) -> bool:
         """
         クラスターのコンテナを削除する
         """
@@ -72,6 +72,13 @@ class AbstractExecuter(metaclass=ABCMeta):
     def get_container_internal_ip(self, containers: List[Container], node_manager: NodeManager):
         """
         コンテナの内部IPを取得する
+        """
+        pass
+
+    @abstractclassmethod
+    def create_topics(self, container:Container, create_cmd:str, describe_cmd:str = None):
+        """
+        トピックを作成する
         """
         pass
 

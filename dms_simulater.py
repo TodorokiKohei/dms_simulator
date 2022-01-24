@@ -72,12 +72,14 @@ class DmsSimulator():
         brokerを展開し、コンテナが起動しているかを確認する
         """
         print('############### Deploying ###############')
-        start_time = time.perf_counter()
         self._controller.remove_broker()
+        start_time = time.perf_counter()
         self._controller.deploy_broker()
         self._check_container_running(self._controller.check_broker_running, self._check_count)
         end_time = time.perf_counter()
         self._io.write(f"Deploy Broker Time: {end_time-start_time} sec\n")
+        
+        time.sleep(10)  # クラスターの同期時間
         self._controller.create_topics()
 
     def _collect_job(self):
@@ -161,11 +163,11 @@ class DmsSimulator():
         展開した環境を削除する
         """
         print('############### Cleaning ###############')
-        start_time = time.perf_counter()
         self._controller.remove_broker()
         self._controller.remove_publisher()
         self._controller.remove_subscriber()
         self._controller.remove_actions()
+        start_time = time.perf_counter()
         self._controller.clean()
         end_time = time.perf_counter()
         self._io.write(f"Clean Time: {end_time-start_time} sec\n")
