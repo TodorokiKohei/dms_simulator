@@ -76,12 +76,18 @@ class AbstractExecuter(metaclass=ABCMeta):
         pass
 
     @abstractclassmethod
-    def create_topics(self, container:Container, create_cmd:str, describe_cmd:str = None):
+    def create_topics(self, container:Container, create_cmd:str):
         """
         トピックを作成する
         """
         pass
 
+    @abstractclassmethod
+    def describe_topics(self, container:Container, describe_cmd:str):
+        """
+        トピックの状態を確認する
+        """
+        pass
 
 class Executer(AbstractExecuter):
 

@@ -81,6 +81,7 @@ class DmsSimulator():
         
         time.sleep(10)  # クラスターの同期時間
         self._controller.create_topics()
+        self._controller.describe_topics()
 
     def _collect_job(self):
         """
@@ -124,6 +125,9 @@ class DmsSimulator():
         """
         publisher,subscriberを展開し、パフォーマンステストを実行する
         """
+        # トピックの状態を取得
+        self._controller.describe_topics()
+
         # コンテナのIPを取得する
         self._controller.set_container_internal_ip()
 

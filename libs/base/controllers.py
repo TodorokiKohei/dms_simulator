@@ -151,6 +151,10 @@ class AbstrctController(metaclass=ABCMeta):
     def create_topics(self):
         pass
 
+    @abstractclassmethod
+    def describe_topics(self):
+        pass
+
 
 class Controller(AbstrctController):
     BROKER_SERVICE: str
@@ -208,8 +212,8 @@ class Controller(AbstrctController):
         for name, action_configs in actions.items():
             # ターゲットコンテナ毎に作成
             target_containers = action_configs.pop('target_containers')
-            for tgt in target_containers:
-                name = f'{name}-{tgt}'
+            for i, tgt in enumerate(target_containers):
+                name = f'{name}-{str(i)}'
                 configs = copy.deepcopy(action_configs)
                 if action_configs['mode'] in ['delay', 'loss', 'rate']:
                     self._actions.append(PumbaNetemContainer(name, configs, tgt))

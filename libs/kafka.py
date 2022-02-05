@@ -245,26 +245,35 @@ class KafkaController(Controller):
         # 作成するトピックの情報
         if "topics" in systems["broker"]:
             self._topic_info = systems["broker"]["topics"]
+            self._create_topic_command()
 
-    def create_topics(self):
+    def _create_topic_command(self):
         brokers = self._topic_info["brokers"]
         topic_list = self._topic_info["list"]
-        topic_create_cmd = ""
-        topic_describe_cmd = ""
+        self._topic_create_cmd = ""
+        self._topic_describe_cmd = ""
         for topic in topic_list:
             topic_name, partitions, replication_factor = topic.split(':')
             cmd = f"kafka-topics --bootstrap-server {','.join(brokers)} --topic {topic_name} --partitions {partitions} --replication-factor {replication_factor} --create"
-            if topic_create_cmd != "":
-                topic_create_cmd += " && "
-            topic_create_cmd += cmd
+            if self._topic_create_cmd != "":
+                self._topic_create_cmd += " && "
+            self._topic_create_cmd += cmd
 
             cmd = f"kafka-topics --bootstrap-server {','.join(brokers)} --topic {topic_name} --describe"
-            if topic_describe_cmd != "":
-                topic_describe_cmd += " && "
-            topic_describe_cmd += cmd
+            if self._topic_describe_cmd != "":
+                self._topic_describe_cmd += " && "
+            self._topic_describe_cmd += cmd
 
+    def create_topics(self):
         for container in self._broker:
             if isinstance(container, KafkaContainer):
                 kafka = container
                 break
-        self._executre.create_topics(kafka, topic_create_cmd, topic_describe_cmd)
+        self._executre.create_topics(kafka, self._topic_create_cmd)
+
+    def describe_topics(self):
+        for container in self._broker:
+            if isinstance(container, KafkaContainer):
+                kafka = container
+                break
+        self._executre.describe_topics(kafka, self._topic_describe_cmd)

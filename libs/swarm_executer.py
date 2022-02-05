@@ -149,7 +149,7 @@ class SwarmExecuter(Executer):
                 internal_ip_list.append({'name':name.split('.')[0], 'ip':ip[0]})
         return internal_ip_list
 
-    def create_topics(self, container: Container, create_cmd: str, describe_cmd: str = None):
+    def create_topics(self, container: Container, create_cmd: str):
         node = container.node
         up_containers, _ = node.ssh_exec("docker ps --format '{{.Names}}'")
         for container_name in up_containers:
@@ -158,7 +158,15 @@ class SwarmExecuter(Executer):
                 continue
             # トピック作成
             node.ssh_exec(f"docker exec {container_name} {create_cmd}")
+            break
+
+    def describe_topics(self, container: Container, describe_cmd: str):
+        node = container.node
+        up_containers, _ = node.ssh_exec("docker ps --format '{{.Names}}'")
+        for container_name in up_containers:
+            name = container_name.split(".")[0]
+            if not name.endswith(container.name):
+                continue
             # トピック詳細
-            if describe_cmd is not None:
-                node.ssh_exec(f"docker exec {container_name} {describe_cmd}")
+            node.ssh_exec(f"docker exec {container_name} {describe_cmd}")
             break

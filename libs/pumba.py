@@ -70,5 +70,5 @@ class PumbaNetemContainer(PumbaContainer):
         cmd += f' {self._mode}'
         for param, value in self._params.items():
             cmd += f' --{param} {value}'
-        cmd += f' re2:{self.target_container}'
+        cmd += f' re2:.*{self.target_container}.*'
         self.command = cmd
