@@ -1,0 +1,26 @@
+version: '3.8'
+services:
+  pub-1:
+    image: todoroki182814/dms-client
+    hostname: pub-1
+    volumes:
+    - type: bind
+      source: /tmp/pub-1/configs
+      target: /code/configs
+    - type: bind
+      source: /tmp/pub-1/results
+      target: /code/results
+    networks:
+    - kafka-network
+    command: python publisher.py
+    deploy:
+      mode: global
+      endpoint_mode: dnsrr
+      placement:
+        constraints:
+        - node.hostname==publisher-1
+      restart_policy:
+        condition: on-failure
+networks:
+  kafka-network:
+    external: true
