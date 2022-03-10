@@ -213,9 +213,7 @@ class KafkaController(Controller):
     PUBLISHER_SERVICE = 'kafka-publihser'
     SUBSCRIBER_SERVICE = 'kafka-subscriber'
 
-    def __init__(self, node_manager: NodeManager, executer: Executer, systems: dict, root_dir: str):
-        super().__init__(node_manager, executer, systems, root_dir)
-
+    def create_containers(self, systems):
         # Brokerのコンテナ情報の作成
         zoo_info = systems['broker']['zookeeper']
         for name, configs in zoo_info.items():
@@ -242,16 +240,19 @@ class KafkaController(Controller):
         self._containers.extend(self._publisher)
         self._containers.extend(self._subscriber)
 
-        # 作成するトピックの情報
+    def create_topic_info(self, systems:dict):
+        # トピックの情報を作成する
         if "topics" in systems["broker"]:
-            self._topic_info = systems["broker"]["topics"]
-            self._create_topic_command()
-
-    def _create_topic_command(self):
-        brokers = self._topic_info["brokers"]
-        topic_list = self._topic_info["list"]
-        self._topic_create_cmd = ""
-        self._topic_describe_cmd = ""
+            topic_info = systems["broker"]["topics"]
+            self._topic_create_cmd = ""
+            self._build_topic_create_command(topic_info)
+            self._topic_describe_cmd = ""
+            self._build_topic_describe_command(topic_info)
+            
+    def _build_topic_create_command(self, topic_info):
+        # トピック作成コマンドの組み立て
+        brokers = topic_info["brokers"]
+        topic_list = topic_info["list"]
         for topic in topic_list:
             topic_name, partitions, replication_factor = topic.split(':')
             cmd = f"kafka-topics --bootstrap-server {','.join(brokers)} --topic {topic_name} --partitions {partitions} --replication-factor {replication_factor} --create"
@@ -259,6 +260,12 @@ class KafkaController(Controller):
                 self._topic_create_cmd += " && "
             self._topic_create_cmd += cmd
 
+    def _build_topic_describe_command(self, topic_info):
+        # トピック詳細コマンドの組み立て
+        brokers = topic_info["brokers"]
+        topic_list = topic_info["list"]
+        for topic in topic_list:
+            topic_name, partitions, replication_factor = topic.split(':')
             cmd = f"kafka-topics --bootstrap-server {','.join(brokers)} --topic {topic_name} --describe"
             if self._topic_describe_cmd != "":
                 self._topic_describe_cmd += " && "

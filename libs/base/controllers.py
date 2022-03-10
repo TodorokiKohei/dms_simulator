@@ -15,6 +15,20 @@ from schedule import Scheduler
 
 class AbstrctController(metaclass=ABCMeta):
     @abstractclassmethod
+    def create_containers(self, systems:dict):
+        """
+        テンプレートファイルの「systems」からコンテナのインスタンスを作成
+        """
+        pass
+
+    @abstractclassmethod
+    def create_topic_info(self, systems:dict):
+        """
+        テンプレートファイルの「systems」からトピックの情報を作成
+        """
+        pass
+
+    @abstractclassmethod
     def create_actions(self, actions):
         """
         テンプレートファイルを基に障害注入情報の作成
@@ -175,6 +189,9 @@ class Controller(AbstrctController):
         self._subscriber: List[Container] = []
         self._actions: List[Container] = []
         self._tc_containers: List[Container] = []
+
+        self.create_containers(systems)
+        self.create_topic_info(systems)
 
     @property
     def duration(self):
