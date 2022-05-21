@@ -240,7 +240,7 @@ class KafkaController(Controller):
         self._containers.extend(self._publisher)
         self._containers.extend(self._subscriber)
 
-    def create_topic_info(self, systems:dict):
+    def create_topic_info(self, systems: dict):
         # トピックの情報を作成する
         if "topics" in systems["broker"]:
             topic_info = systems["broker"]["topics"]
@@ -248,7 +248,7 @@ class KafkaController(Controller):
             self._build_topic_create_command(topic_info)
             self._topic_describe_cmd = ""
             self._build_topic_describe_command(topic_info)
-            
+
     def _build_topic_create_command(self, topic_info):
         # トピック作成コマンドの組み立て
         brokers = topic_info["brokers"]
@@ -276,11 +276,12 @@ class KafkaController(Controller):
             if isinstance(container, KafkaContainer):
                 kafka = container
                 break
-        self._executre.create_topics(kafka, self._topic_create_cmd)
+        self._executre.exec_command_in_container(kafka, self._topic_create_cmd)
 
     def describe_topics(self):
         for container in self._broker:
             if isinstance(container, KafkaContainer):
                 kafka = container
                 break
-        self._executre.describe_topics(kafka, self._topic_describe_cmd)
+        self._executre.exec_command_in_container(
+            kafka, self._topic_describe_cmd)

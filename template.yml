@@ -28,3 +28,13 @@ systems:
         node_name: "broker-1"
         command: "-c /tmp/configs/js.conf"
 
+    topics:
+      server: "jetstream-1"
+      stream:
+        - name: STREAM
+          file: stream.json
+          consumer: 
+            - "pull-consumer.json"
+            - "push-consumer.json"
+
+

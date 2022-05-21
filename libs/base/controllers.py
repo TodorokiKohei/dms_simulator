@@ -180,6 +180,7 @@ class Controller(AbstrctController):
         self._executre = executer
         self._duration = systems['duration']
         self._home_dir = os.path.join(root_dir, 'controller')
+        self._topic_dir = os.path.join(self._home_dir, 'topic_configs')
 
         self._containers: List[Container] = []
         self._broker: List[Container] = []
@@ -187,9 +188,6 @@ class Controller(AbstrctController):
         self._subscriber: List[Container] = []
         self._actions: List[Container] = []
         self._tc_containers: List[Container] = []
-
-        # self.create_containers(systems)
-        # self.create_topic_info(systems)
 
     @property
     def duration(self):
@@ -397,6 +395,8 @@ class Controller(AbstrctController):
     def create_configs_dir(self):
         for container in self._containers:
             os.makedirs(container.get_config_path(), exist_ok=True)
+        os.makedirs(self._topic_dir, exist_ok=True)
+        
 
     def remove_results(self):
         # 実行結果の削除を行う
