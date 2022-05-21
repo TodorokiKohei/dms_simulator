@@ -7,13 +7,14 @@ import schedule
 import yaml
 
 from libs.base.controllers import Controller
+from libs.jetstream import JetStreamController
 from libs.kafka import KafkaController
 from libs.swarm_executer import SwarmExecuter
 from libs.utils import Node, NodeManager
 
 
 class DmsSimulator():
-    def __init__(self, controller:Controller):
+    def __init__(self, controller: Controller):
         self._controller = controller
         self._scheduler = schedule.Scheduler()
         self._check_count = 10
@@ -36,7 +37,6 @@ class DmsSimulator():
         self._controller.initialize()
         end_time = time.perf_counter()
         self._io.write(f"Initialize Time: {end_time-start_time} sec\n")
-
 
     def _check_container_running(self, check_function, nums):
         """
@@ -75,10 +75,11 @@ class DmsSimulator():
         self._controller.remove_broker()
         start_time = time.perf_counter()
         self._controller.deploy_broker()
-        self._check_container_running(self._controller.check_broker_running, self._check_count)
+        self._check_container_running(
+            self._controller.check_broker_running, self._check_count)
         end_time = time.perf_counter()
         self._io.write(f"Deploy Broker Time: {end_time-start_time} sec\n")
-        
+
         time.sleep(10)  # クラスターの同期時間
         self._controller.create_topics()
         self._controller.describe_topics()
@@ -108,7 +109,8 @@ class DmsSimulator():
         """
         self._controller.deploy_publisher()
         try:
-            self._check_container_running(self._controller.check_publisher_running, self._check_count)
+            self._check_container_running(
+                self._controller.check_publisher_running, self._check_count)
         except RuntimeError as e:
             self._exec_info = e
 
@@ -117,7 +119,8 @@ class DmsSimulator():
         """
         self._controller.deploy_subscriber()
         try:
-            self._check_container_running(self._controller.check_subscriber_running, self._check_count)
+            self._check_container_running(
+                self._controller.check_subscriber_running, self._check_count)
         except RuntimeError as e:
             self._exec_info = e
 
@@ -128,10 +131,8 @@ class DmsSimulator():
         # トピックの状態を取得
         self._controller.describe_topics()
 
-        # コンテナのIPを取得する
+        # コンテナの内部IPを取得し、actionsで実行するコンテナの初期設定を行う
         self._controller.set_container_internal_ip()
-
-        # actionsで実行するコンテナの初期設定
         self._controller.set_up_actions()
 
         # pulibhser,subscriberを展開
@@ -146,11 +147,14 @@ class DmsSimulator():
         if self._exec_info is not None:
             raise self._exec_info
         end_time = time.perf_counter()
-        self._io.write(f"Deploy Publisher And Subscriber Time: {end_time-start_time} sec\n")
+        self._io.write(
+            f"Deploy Publisher And Subscriber Time: {end_time-start_time} sec\n")
 
         # 結果の回収,障害注入をスケジューラーに登録し待機する
-        print(f"-------------- Execution Time: {controller.duration} sec --------------")
-        self._scheduler.every(self._controller.duration).seconds.do(self._collect_job)
+        print(
+            f"-------------- Execution Time: {controller.duration} sec --------------")
+        self._scheduler.every(
+            self._controller.duration).seconds.do(self._collect_job)
         self._controller.schedule_actions(self._scheduler)
         print(self._scheduler.get_jobs())
         while self._scheduler.get_jobs() != []:
@@ -188,8 +192,9 @@ class DmsSimulator():
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-f', '--file', default='template.yml', help='Specify the template file (default: template.yml)')
-    parser.add_argument('-m', '--mode', default='run', choices=['run', 'init', 'deploy', 'test', 'clean'],
+    parser.add_argument('-f', '--file', default='template.yml',
+                        help='Specify the template file (default: template.yml)')
+    parser.add_argument('-m', '--mode', default='run', choices=['run', 'init', 'deploy', 'test', 'clean', 'create-dir', 'remove-results'],
                         help='Specify the execution mode (default: run the test)')
     parser.add_argument('--debug', action='store_true')
     args = parser.parse_args()
@@ -222,6 +227,13 @@ if __name__ == "__main__":
     if template["systems"]["type"] == 'kafka':
         controller = KafkaController(
             node_manager, executer, template['systems'], root_dir)
+    elif template["systems"]["type"] == 'jetstream':
+        controller = JetStreamController(
+            node_manager, executer, template['systems'], root_dir)
+
+    # コンテナ情報をとトピック情報を作成
+    controller.create_containers(template["systems"])
+    controller.create_topic_info(template["systems"])
 
     # 発生障害の情報を作成する
     if 'actions' in template.keys():
@@ -243,6 +255,12 @@ if __name__ == "__main__":
         ds.test_performance()
     elif args.mode == 'clean':
         ds.clean()
+    elif args.mode == 'create-dir':
+        print("create directory")
+        controller.create_configs_dir()
+    elif args.mode == 'remove-results':
+        print("remove results directory")
+        controller.remove_results()
     else:
         raise RuntimeError(f"Not implemented {args.mode}")
     ds.close()
