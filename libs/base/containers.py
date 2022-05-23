@@ -114,7 +114,7 @@ class Container(AbstractContainer):
     def record_container_info(self):
         if self.internal_ip is None:
             return
-        file_path = os.path.join(self.home_dir, f"{self.name}_internal_ip")
+        file_path = os.path.join(self.get_result_path(), f"{self.name}_internal_ip")
         with open(file_path, mode="w") as f:
             f.write(self.internal_ip)
 

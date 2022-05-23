@@ -3,6 +3,7 @@ import os
 
 from libs.base.containers import Container
 from libs.base.controllers import Controller
+from libs.clients import ClientContainer
 
 JETSTREAM_NETWORK = "jetstream-network"
 
@@ -116,6 +117,7 @@ class JetStreamContainer(Container):
         pass
 
 
+
 class JetStreamController(Controller):
     BROKER_SERVICE = "jetstream-broker"
     PUBLISHER_SERVICE = "jetstream-publisher"
@@ -126,7 +128,16 @@ class JetStreamController(Controller):
         for name, configs in jetstream_info.items():
             self._broker.append(JetStreamContainer(name, configs))
 
+        for name, configs in systems['publisher'].items():
+            configs['networks'] = self._broker[0].networks
+            self._publisher.append(ClientContainer(name, configs))
+        for name, configs in systems['subscriber'].items():
+            configs['networks'] = self._broker[0].networks
+            self._subscriber.append(ClientContainer(name, configs))
+
         self._containers.extend(self._broker)
+        self._containers.extend(self._publisher)
+        self._containers.extend(self._subscriber)
 
     def create_topic_info(self, systems):
         topic_info = systems["broker"]["topics"]
