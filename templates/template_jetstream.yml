@@ -21,13 +21,21 @@ base:
 
 systems:
   type: jetstream
-  duration: 2m
+  duration: 60s
   broker:
     jetstream:
       jetstream-1:
-        node_name: "broker-1"
-        command: "-c /tmp/configs/js.conf"
-
+          node_name: "broker-1"
+          command: "-c /tmp/configs/js.conf"
+      # jetstream-1:
+      #   node_name: "broker-1"
+      #   command: "-c /tmp/configs/js-cluster.conf"
+      # jetstream-2:
+      #   node_name: "broker-2"
+      #   command: "-c /tmp/configs/js-cluster.conf"
+      # jetstream-3:
+      #   node_name: "broker-3"
+      #   command: "-c /tmp/configs/js-cluster.conf"
     topics:
       server: "jetstream-1"
       stream:
@@ -36,4 +44,11 @@ systems:
           consumer: 
             - "pull-consumer.json"
             - "push-consumer.json"
-
+  publisher:
+    jetstream-pub-1:
+      node_name: 'publisher-1'
+      command: '-d jetstream -c ./configs/jetstreamconf.yaml'
+  subscriber:
+    jetstream-sub-1:
+      node_name: 'subscriber-1'
+      command: '-d jetstream -c ./configs/jetstreamconf.yaml'

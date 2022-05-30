@@ -1,3 +1,4 @@
+import glob
 import os
 from abc import ABCMeta, abstractclassmethod
 
@@ -50,7 +51,7 @@ class AbstractContainer(metaclass=ABCMeta):
 
 class Container(AbstractContainer):
     def __init__(self, name, image=None, node_name=None, ports=None, volumes=None, environment=None, networks=None,
-                 command=None):
+                 command=None, config_info=None):
         self.image = image
         self.name = name
         self.node_name = node_name
@@ -59,9 +60,10 @@ class Container(AbstractContainer):
         self.environemnt = environment
         self.networks = networks
         self.command = command
-
+        self.config_info = config_info
         self.home_dir = None
         self.node: Node = None
+        
         self.internal_ip = None
 
     def create_volume_dir(self):
@@ -114,7 +116,8 @@ class Container(AbstractContainer):
     def record_container_info(self):
         if self.internal_ip is None:
             return
-        file_path = os.path.join(self.get_result_path(), f"{self.name}_internal_ip")
+        file_path = os.path.join(
+            self.get_result_path(), f"{self.name}_internal_ip")
         with open(file_path, mode="w") as f:
             f.write(self.internal_ip)
 
@@ -123,3 +126,12 @@ class Container(AbstractContainer):
 
     def get_result_path(self):
         return os.path.join(self.home_dir, "results")
+
+    def transfer_configs(self):
+        for conf_info in self.config_info:
+            file_list = glob.glob(os.path.join(
+                self.get_config_path(), conf_info['file']))
+            for file in file_list:
+                remote_filename = os.path.join(
+                    conf_info['to'], os.path.basename(file))
+                self.node.sftp_put(file, remote_filename)

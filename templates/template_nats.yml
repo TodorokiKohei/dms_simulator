@@ -21,7 +21,7 @@ base:
 
 systems:
   type: nats
-  duration: 60s
+  duration: 120s
   broker:
     nats:
       nats-1:
@@ -30,10 +30,8 @@ systems:
   publisher:
     nats-pub-1:
       node_name: 'publisher-1'
-      # node_name: 'broker-1'
       command: '-d nats -c ./configs/natsconf.yaml'
   subscriber:
     nats-sub-1:
       node_name: 'subscriber-1'
-      # node_name: 'broker-1'
       command: '-d nats -c ./configs/natsconf.yaml'

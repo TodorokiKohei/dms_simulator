@@ -9,6 +9,7 @@ import yaml
 from libs.base.controllers import Controller
 from libs.jetstream import JetStreamController
 from libs.kafka import KafkaController
+from libs.nats import NatsController
 from libs.swarm_executer import SwarmExecuter
 from libs.utils import Node, NodeManager
 
@@ -229,6 +230,9 @@ if __name__ == "__main__":
             node_manager, executer, template['systems'], root_dir)
     elif template["systems"]["type"] == 'jetstream':
         controller = JetStreamController(
+            node_manager, executer, template['systems'], root_dir)
+    elif template["systems"]["type"] == 'nats':
+        controller = NatsController(
             node_manager, executer, template['systems'], root_dir)
 
     # コンテナ情報をとトピック情報を作成
