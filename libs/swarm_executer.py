@@ -46,7 +46,7 @@ class SwarmExecuter(Executer):
         # ネットワークの作成
         networks = self._get_container_network(containers)
         for network in networks:
-            manager.ssh_exec(f'docker network create -d overlay {network}')
+            manager.ssh_exec(f'docker network create -d overlay --opt com.docker.network.driver.mtu=9000 {network}')
 
     def delete_cluster(self, containers: list, node_manager: NodeManager):
         manager = node_manager.get_manager()
@@ -145,28 +145,18 @@ class SwarmExecuter(Executer):
         for node in nodes:
             names, _ = node.ssh_exec('docker ps --format "{{.Names}}"')
             for name in names:
-                ip, _ = node.ssh_exec('docker inspect -f "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}" ' + name)
-                internal_ip_list.append({'name':name.split('.')[0], 'ip':ip[0]})
+                ip, _ = node.ssh_exec(
+                    'docker inspect -f "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}" ' + name)
+                internal_ip_list.append(
+                    {'name': name.split('.')[0], 'ip': ip[0]})
         return internal_ip_list
 
-    def create_topics(self, container: Container, create_cmd: str):
+    def exec_command_in_container(self, container: Container, cmd: str):
         node = container.node
         up_containers, _ = node.ssh_exec("docker ps --format '{{.Names}}'")
         for container_name in up_containers:
             name = container_name.split(".")[0]
             if not name.endswith(container.name):
                 continue
-            # トピック作成
-            node.ssh_exec(f"docker exec {container_name} {create_cmd}")
-            break
-
-    def describe_topics(self, container: Container, describe_cmd: str):
-        node = container.node
-        up_containers, _ = node.ssh_exec("docker ps --format '{{.Names}}'")
-        for container_name in up_containers:
-            name = container_name.split(".")[0]
-            if not name.endswith(container.name):
-                continue
-            # トピック詳細
-            node.ssh_exec(f"docker exec {container_name} {describe_cmd}")
+            node.ssh_exec(f"docker exec {container_name} {cmd}")
             break

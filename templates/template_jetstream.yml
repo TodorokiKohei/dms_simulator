@@ -1,0 +1,39 @@
+
+base:
+  user: todoroki
+  keyfile: $KEYFILE
+  sudopass: $SUDOPASS
+  nodes:
+    publisher-1:
+      address: 10.20.22.158
+    subscriber-1:
+      address: 10.20.22.159
+    broker-1:
+      address: 10.20.22.161
+    broker-2:
+      address: 10.20.22.162
+    broker-3:
+      address: 10.20.22.163
+    manager:
+      address: 10.20.22.164
+      is_manager: true
+
+
+systems:
+  type: jetstream
+  duration: 2m
+  broker:
+    jetstream:
+      jetstream-1:
+        node_name: "broker-1"
+        command: "-c /tmp/configs/js.conf"
+
+    topics:
+      server: "jetstream-1"
+      stream:
+        - name: STREAM
+          file: stream.json
+          consumer: 
+            - "pull-consumer.json"
+            - "push-consumer.json"
+

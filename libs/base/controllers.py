@@ -180,8 +180,7 @@ class Controller(AbstrctController):
         self._executre = executer
         self._duration = systems['duration']
         self._home_dir = os.path.join(root_dir, 'controller')
-        if os.path.exists(self._home_dir):
-            shutil.rmtree(self._home_dir)
+        self._topic_dir = os.path.join(self._home_dir, 'topic_configs')
 
         self._containers: List[Container] = []
         self._broker: List[Container] = []
@@ -189,9 +188,6 @@ class Controller(AbstrctController):
         self._subscriber: List[Container] = []
         self._actions: List[Container] = []
         self._tc_containers: List[Container] = []
-
-        self.create_containers(systems)
-        self.create_topic_info(systems)
 
     @property
     def duration(self):
@@ -207,14 +203,12 @@ class Controller(AbstrctController):
                 f'[{container.name}]: There are no matching nodes.')
         container.node = node
 
-    def _set_container_home(self, container: Container):
+    def _set_and_create_container_home_dir(self, container: Container):
         """
-        コンテナのコンフィグファイルや結果を保存するディレクトリを設定
+        コンテナの結果を保存するディレクトリパスを設定・作成する
         """
         container.home_dir = os.path.join(self._home_dir, container.name)
-        if os.path.exists(container.home_dir):
-            shutil.rmtree(container.home_dir)
-        os.makedirs(container.home_dir, exist_ok=True)
+        os.makedirs(container.get_result_path(), exist_ok=True)
 
     def _search_container(self, container_name: str):
         """
@@ -226,14 +220,14 @@ class Controller(AbstrctController):
         return None
 
     def create_actions(self, actions: dict):
-        for name, action_configs in actions.items():
+        for action_name, action_configs in actions.items():
             # ターゲットコンテナ毎に作成
             target_containers = action_configs.pop('target_containers')
             for i, tgt in enumerate(target_containers):
-                name = f'{name}-{str(i)}'
+                action_name = f'{action_name}-{str(i)}'
                 configs = copy.deepcopy(action_configs)
                 if action_configs['mode'] in ['delay', 'loss', 'rate']:
-                    self._actions.append(PumbaNetemContainer(name, configs, tgt))
+                    self._actions.append(PumbaNetemContainer(action_name, configs, tgt))
                     self._tc_containers.append(TcContainer())
                 else:
                     raise NotImplementedError(
@@ -252,7 +246,7 @@ class Controller(AbstrctController):
             self._set_container_node(tc_container)
 
             # ログを保存するローカルのディレクトリを作成
-            self._set_container_home(action_container)
+            self._set_and_create_container_home_dir(action_container)
 
             # コマンド作成
             action_container.create_commnad(self._containers)
@@ -295,9 +289,9 @@ class Controller(AbstrctController):
         for container in self._containers:
             self._set_container_node(container)
 
-        # コンテナのログや設定ファイルを保存するローカルのディレクトリを設定
+        # コンテナのログや設定ファイルを保存するローカルのディレクトリパスを設定・作成する
         for container in self._containers:
-            self._set_container_home(container)
+            self._set_and_create_container_home_dir(container)
 
     def initialize(self):
         # コンテナのボリュームを作成
@@ -390,6 +384,7 @@ class Controller(AbstrctController):
             container.record_container_info()
 
     def set_container_internal_ip(self):
+        # コンテナの内部IPを取得・設定する  
         internal_ip_info_list = self._executre.get_container_internal_ip(self._containers, self._node_manager)
         for internal_ip_info in internal_ip_info_list:
             for container in self._containers:
@@ -397,3 +392,15 @@ class Controller(AbstrctController):
                     container.internal_ip = internal_ip_info['ip']
                     break
 
+    def create_configs_dir(self):
+        for container in self._containers:
+            os.makedirs(container.get_config_path(), exist_ok=True)
+        os.makedirs(self._topic_dir, exist_ok=True)
+        
+
+    def remove_results(self):
+        # 実行結果の削除を行う
+        for container in self._containers:
+            if os.path.exists(container.get_result_path()):
+                shutil.rmtree(container.get_result_path())
+            

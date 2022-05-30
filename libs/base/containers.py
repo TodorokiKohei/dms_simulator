@@ -3,6 +3,7 @@ from abc import ABCMeta, abstractclassmethod
 
 from libs.utils import Node
 
+
 class AbstractContainer(metaclass=ABCMeta):
     @abstractclassmethod
     def create_volume_dir(self):
@@ -113,6 +114,12 @@ class Container(AbstractContainer):
     def record_container_info(self):
         if self.internal_ip is None:
             return
-        file_path = os.path.join(self.home_dir, f"{self.name}_internal_ip")
+        file_path = os.path.join(self.get_result_path(), f"{self.name}_internal_ip")
         with open(file_path, mode="w") as f:
             f.write(self.internal_ip)
+
+    def get_config_path(self):
+        return os.path.join(self.home_dir, "configs")
+
+    def get_result_path(self):
+        return os.path.join(self.home_dir, "results")

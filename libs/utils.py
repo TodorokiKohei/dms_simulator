@@ -1,6 +1,7 @@
 import re
 import time
 import threading
+import pprint
 
 import paramiko
 
@@ -24,10 +25,10 @@ def connect(func):
         err = [s.rstrip() for s in err]
         with lock:
             if res != []:
-                print(res)
+                pprint.pprint(res)
             if err != []:
                 print("************** ERROR **************")
-                print(err)
+                pprint.pprint(err)
         return (res, err)
     return exec
 
