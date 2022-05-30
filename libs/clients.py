@@ -21,7 +21,7 @@ class ClientContainer(Container):
         ]
         if 'networks' not in configs.keys():
             raise RuntimeError("Please specify the client network.")
-        self._configs = [
+        configs['config_info'] = [
             {
                 'file': '*',
                 'to': f'/tmp/{name}/configs'
@@ -35,13 +35,7 @@ class ClientContainer(Container):
         super().__init__(name, **configs)
 
     def pre_up_process(self):
-        for configs in self._configs:
-            file_list = glob.glob(os.path.join(
-                self.get_config_path(), configs['file']))
-            for file in file_list:
-                remote_filename = os.path.join(
-                    configs['to'], os.path.basename(file))
-                self.node.sftp_put(file, remote_filename)
+        self.transfer_configs()
 
     def collect_results(self):
         for results in self._results:

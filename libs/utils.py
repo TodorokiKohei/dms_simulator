@@ -25,10 +25,10 @@ def connect(func):
         err = [s.rstrip() for s in err]
         with lock:
             if res != []:
-                pprint.pprint(res)
+                pprint.pprint(res, width=160)
             if err != []:
                 print("************** ERROR **************")
-                pprint.pprint(err)
+                pprint.pprint(err, width=160)
         return (res, err)
     return exec
 
@@ -98,7 +98,7 @@ class NodeManager:
     def append(self, node):
         self._nodes.append(node)
 
-    def get_manager(self):
+    def get_manager(self) -> Node:
         for node in self._nodes:
             if node.is_manager:
                 return node

@@ -11,10 +11,12 @@ JETSTREAM_NETWORK = "jetstream-network"
 class NatsBox(Container):
     SERVICE = 'nats-box'
 
-    def __init__(self, name, server):
+    def __init__(self, name, server, stream_configs):
         self._server = server
+        self._stream_configs = stream_configs
         self._config_source = f'/tmp/{name}/configs'
         self._config_target = '/tmp/configs'
+
         configs = {}
         configs['image'] = 'natsio/nats-box'
         configs['volumes'] = [
@@ -27,20 +29,17 @@ class NatsBox(Container):
         configs['command'] = '-c "while :; do sleep 10; done"'
         super().__init__(name, **configs)
 
-        self._stream_configs = []
-
-    def set_stream_configs(self, stream_configs: list):
-        self._stream_configs.extend(stream_configs)
-
     def build_command_to_create_stream(self):
         command = 'sh -c "'
         is_first = True
         for stream_config in self._stream_configs:
             stream_name = stream_config['name']
-            stream_file = os.path.join(self._config_target, stream_config['file'])
+            stream_file = os.path.join(
+                self._config_target, stream_config['file'])
             cmd = f'nats -s nats://{self._server} str add {stream_name} --config {stream_file}'
             for consumer_file in stream_config['consumer']:
-                consumer_file = os.path.join(self._config_target, consumer_file)
+                consumer_file = os.path.join(
+                    self._config_target, consumer_file)
                 cmd += f' && nats -s nats://{self._server} con add {stream_name} --config {consumer_file}'
             if is_first:
                 command += cmd
@@ -64,12 +63,12 @@ class NatsBox(Container):
 
     def pre_up_process(self):
         self.create_volume_dir()
-        for configs in self._stream_configs:
-            file_list = glob.glob(os.path.join(
-                self.home_dir, '*'))
-            for file in file_list:
-                remote_filename = os.path.join(self._config_source, os.path.basename(file))
-                self.node.sftp_put(file, remote_filename)
+        file_list = glob.glob(os.path.join(
+            self.home_dir, '*'))
+        for file in file_list:
+            remote_filename = os.path.join(
+                self._config_source, os.path.basename(file))
+            self.node.sftp_put(file, remote_filename)
 
     def collect_results(self):
         pass
@@ -93,29 +92,22 @@ class JetStreamContainer(Container):
                     'target': '/tmp/configs'
                 }
             ]
-        if 'configs' not in configs.keys():
-            self._configs = [
+        if 'config_info' not in configs.keys():
+            configs['config_info'] = [
                 {
                     'file': '*',
                     'to': f'/tmp/{name}/configs'
                 }
             ]
         else:
-            self._configs = configs.pop('configs')
+            self._configs = configs.pop('config_info')
         super().__init__(name, **configs)
 
     def pre_up_process(self):
-        for configs in self._configs:
-            file_list = glob.glob(os.path.join(
-                self.get_config_path(), configs['file']))
-            for file in file_list:
-                remote_filename = os.path.join(
-                    configs['to'], os.path.basename(file))
-                self.node.sftp_put(file, remote_filename)
+        self.transfer_configs()
 
     def collect_results(self):
         pass
-
 
 
 class JetStreamController(Controller):
@@ -142,12 +134,12 @@ class JetStreamController(Controller):
     def create_topic_info(self, systems):
         topic_info = systems["broker"]["topics"]
         manager = self._node_manager.get_manager()
-        self._natsbox = NatsBox('nats-box', topic_info['server'])
+        self._natsbox = NatsBox(
+            'nats-box', topic_info['server'], topic_info['stream'])
         self._natsbox.node_name = manager.name
         self._natsbox.node = manager
         self._natsbox.networks = self._broker[0].networks
-        self._natsbox.home_dir = self._topic_dir
-        self._natsbox.set_stream_configs(topic_info['stream'])
+        self._natsbox.home_dir = os.path.join(self._topic_dir, 'jetstream')
 
     def deploy_broker(self):
         super().deploy_broker()

@@ -395,7 +395,11 @@ class Controller(AbstrctController):
     def create_configs_dir(self):
         for container in self._containers:
             os.makedirs(container.get_config_path(), exist_ok=True)
-        os.makedirs(self._topic_dir, exist_ok=True)
+
+        broker_types = ['kafka', 'jetstream']
+        for broker_type in broker_types:
+            p = os.path.join(self._topic_dir, broker_type)
+            os.makedirs(p, exist_ok=True)
         
 
     def remove_results(self):
