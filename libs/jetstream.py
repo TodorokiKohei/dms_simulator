@@ -1,5 +1,6 @@
 import glob
 import os
+import time
 
 from libs.base.containers import Container
 from libs.base.controllers import Controller
@@ -154,6 +155,9 @@ class JetStreamController(Controller):
             [self._natsbox], self._node_manager, self._natsbox.SERVICE)
 
     def create_topics(self):
+        sec = len(self._broker) * 3
+        time.sleep(sec)  
+        print(f"Waiting for cluster synchronization.({sec} sec)")
         command = self._natsbox.build_command_to_create_stream()
         self._executre.exec_command_in_container(self._natsbox, command)
 

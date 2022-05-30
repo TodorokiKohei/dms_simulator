@@ -81,7 +81,6 @@ class DmsSimulator():
         end_time = time.perf_counter()
         self._io.write(f"Deploy Broker Time: {end_time-start_time} sec\n")
 
-        time.sleep(10)  # クラスターの同期時間
         self._controller.create_topics()
         self._controller.describe_topics()
 
