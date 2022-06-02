@@ -112,6 +112,7 @@ class JetStreamContainer(Container):
 
 
 class JetStreamController(Controller):
+    BROKER = "jetstream"
     BROKER_SERVICE = "jetstream-broker"
     PUBLISHER_SERVICE = "jetstream-publisher"
     SUBSCRIBER_SERVICE = "jetstream-subscriber"
@@ -140,7 +141,7 @@ class JetStreamController(Controller):
         self._natsbox.node_name = manager.name
         self._natsbox.node = manager
         self._natsbox.networks = self._broker[0].networks
-        self._natsbox.home_dir = os.path.join(self._topic_dir, 'jetstream')
+        self._natsbox.home_dir = self._topic_dir
 
     def deploy_broker(self):
         super().deploy_broker()

@@ -3,6 +3,7 @@ import os
 import shutil
 from typing import List
 from abc import ABCMeta, abstractclassmethod
+from datetime import datetime
 
 import schedule
 from libs import utils
@@ -171,6 +172,7 @@ class AbstrctController(metaclass=ABCMeta):
 
 
 class Controller(AbstrctController):
+    BROKER: str
     BROKER_SERVICE: str
     PUBLISHER_SERVICE: str
     SUBSCRIBER_SERVICE: str
@@ -179,7 +181,7 @@ class Controller(AbstrctController):
         self._node_manager = node_manager
         self._executre = executer
         self._duration = systems['duration']
-        self._home_dir = os.path.join(root_dir, 'controller')
+        self._home_dir = os.path.join(root_dir, 'controller', self.__class__.BROKER)
         self._topic_dir = os.path.join(self._home_dir, 'topic_configs')
 
         self._containers: List[Container] = []
@@ -395,16 +397,20 @@ class Controller(AbstrctController):
     def create_configs_dir(self):
         for container in self._containers:
             os.makedirs(container.get_config_path(), exist_ok=True)
-
-        broker_types = ['kafka', 'jetstream']
-        for broker_type in broker_types:
-            p = os.path.join(self._topic_dir, broker_type)
-            os.makedirs(p, exist_ok=True)
-        
+        p = os.path.join(self._topic_dir)
+        os.makedirs(p, exist_ok=True)
 
     def remove_results(self):
         # 実行結果の削除を行う
         for container in self._containers:
             if os.path.exists(container.get_result_path()):
                 shutil.rmtree(container.get_result_path())
-            
+
+    def record_test_time(self, start_time:datetime, end_time:datetime):
+        with open(os.path.join(self._home_dir, "test_record_time"), "a") as f:
+            f.write("****************************************************************\n")
+            f.write(self.__class__.__name__ + "\n")
+            f.write("開始時刻: " + start_time.strftime("%Y/%m/%d %H:%M:%S") + "\n")
+            f.write("終了時刻: " + end_time.strftime("%Y/%m/%d %H:%M:%S") + "\n")
+            f.write("****************************************************************\n\n")
+

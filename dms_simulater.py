@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import os
 import threading
 import time
@@ -20,6 +21,9 @@ class DmsSimulator():
         self._scheduler = schedule.Scheduler()
         self._check_count = 10
         self._exec_info = None
+
+        self._test_start_time = None
+        self._test_end_time = None
 
     def open(self):
         self._io = open("execute_time.log", mode="a")
@@ -135,6 +139,8 @@ class DmsSimulator():
         self._controller.set_container_internal_ip()
         self._controller.set_up_actions()
 
+        self._test_start_time = datetime.datetime.now()
+
         # pulibhser,subscriberを展開
         print('############### Test perfomance ###############')
         start_time = time.perf_counter()
@@ -160,6 +166,9 @@ class DmsSimulator():
         while self._scheduler.get_jobs() != []:
             self._scheduler.run_pending()
             time.sleep(1)
+
+        self._test_end_time = datetime.datetime.now()
+        self._controller.record_test_time(self._test_start_time, self._test_end_time)
 
         # publisher, subscriber, actionsコンテナを削除
         self._controller.remove_publisher()

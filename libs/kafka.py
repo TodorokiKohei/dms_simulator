@@ -74,9 +74,11 @@ class KafkaContainer(Container):
 
 
 class KafkaController(Controller):
+    BROKER = "kafka"
     BROKER_SERVICE = 'kafka-broker'
     PUBLISHER_SERVICE = 'kafka-publihser'
     SUBSCRIBER_SERVICE = 'kafka-subscriber'
+
 
     def create_containers(self, systems):
         # Brokerのコンテナ情報の作成

@@ -38,6 +38,7 @@ class NatsContainer(Container):
 
 
 class NatsController(Controller):
+    BROKER = "nats"
     BROKER_SERVICE = "nats-broker"
     PUBLISHER_SERVICE = "nats-publisher"
     SUBSCRIBER_SERVICE = "nats-subscriber"
