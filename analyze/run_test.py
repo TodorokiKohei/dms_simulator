@@ -6,7 +6,8 @@ import yaml
 
 
 def run_test(broker, template_file, res_suffix):
-    proc = subprocess.run(f"bash run_test.sh '{template_file}' '{broker}' '{res_suffix}'", shell=True)
+    proc = subprocess.run(f"bash run_test.sh '{template_file}' '{broker}' '{res_suffix}'", shell=True, text=True, capture_output=True)
+    
 
 def test_kafka(broker, template_file, pub_conf_list, message_size):
     for acks in ["0", "1"]:
@@ -38,16 +39,16 @@ def test_nats(broker, template_file, pub_conf_list, message_size):
     run_test(broker, template_file, "size_" + message_size)
 
 broker_list = ["kafka", "jetstream", "nats"]
-message_size = "1kb"
-for broker in broker_list:
-    template_file = os.path.join("templates", f"template_{broker}.yml")
-    pub_conf_list = glob.glob(os.path.join("..", "exec_dir", "controller", broker, "*pub*", "configs", "*.yaml"))
-    if broker == "kafka":
-        test_kafka(broker, template_file, pub_conf_list, message_size)
-    elif broker == "jetstream":
-        test_jetstream(broker, template_file, pub_conf_list, message_size)
-    elif broker == "nats":
-        test_nats(broker, template_file, pub_conf_list, message_size)
+for message_size in ["1kb", "4kb"]:
+    for broker in broker_list:
+        template_file = os.path.join("templates", f"template_{broker}.yml")
+        pub_conf_list = glob.glob(os.path.join("..", "exec_dir", "controller", broker, "*pub*", "configs", "*.yaml"))
+        if broker == "kafka":
+            test_kafka(broker, template_file, pub_conf_list, message_size)
+        elif broker == "jetstream":
+            test_jetstream(broker, template_file, pub_conf_list, message_size)
+        elif broker == "nats":
+            test_nats(broker, template_file, pub_conf_list, message_size)
 
 # with open("template.yml", mode='r', encoding='utf-8') as f:
 #         template = yaml.safe_load(f)
