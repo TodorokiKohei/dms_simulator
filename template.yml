@@ -1,4 +1,3 @@
-
 base:
   user: todoroki
   keyfile: $KEYFILE

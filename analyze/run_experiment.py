@@ -20,7 +20,7 @@ def run_test(broker, template_file, res_suffix):
         f"bash run_test.sh '{template_file}' '{broker}' '{res_suffix}'", shell=True, text=True)
 
 def test_kafka_cl(broker, template_file, pub_conf_list, message_size, res_suffix):
-    for acks in ["0", "1"]:
+    for acks in ["1", "all"]:
         deploy_res = run_deploy(template_file)
         topic_info = deploy_res.split('\n')[-2]
         leader = topic_info.split('\\t')[3].split(' ')[-1]
@@ -55,7 +55,8 @@ def test_jetstream_cl(broker, template_file, pub_conf_list, sub_conf_list, messa
 
 
 def test_kafka(broker, template_file, pub_conf_list, message_size, res_suffix):
-    for acks in ["0", "1"]:
+    # for acks in ["0", "1"]:
+    for acks in ["all"]:
         for pub_conf_file in pub_conf_list:
             with open(pub_conf_file, "r") as f:
                 pub_conf = yaml.safe_load(f)
@@ -74,7 +75,7 @@ def test_jetstream(broker, template_file, pub_conf_list, message_size, res_suffi
             pub_conf["pubConf"]['messageSize'] = message_size
         with open(pub_conf_file, "w") as f:
             yaml.safe_dump(pub_conf, f, sort_keys=False)
-    run_single(broker, template_file, "size_" + message_size, res_suffix)
+    run_single(broker, template_file, "size_" + message_size+res_suffix)
 
 
 def test_nats(broker, template_file, pub_conf_list, message_size, res_suffix):
@@ -84,18 +85,24 @@ def test_nats(broker, template_file, pub_conf_list, message_size, res_suffix):
             pub_conf["pubConf"]['messageSize'] = message_size
         with open(pub_conf_file, "w") as f:
             yaml.safe_dump(pub_conf, f, sort_keys=False)
-    run_single(broker, template_file, "size_" + message_size, res_suffix)
+    run_single(broker, template_file, "size_" + message_size+res_suffix)
 
 
 if __name__ == '__main__':
-    isCluster = True
-    res_suffix = '_cl_3'
+    isCluster = False
+    res_suffix = ''
+    # isCluster = True
+    # res_suffix = '_cl_3'
+    # isFault = True
+    # res_suffix = '_cl_3_fault'
 
     if isCluster:
-        # broker_list = ["kafka", "jetstream"]
-        broker_list = ["jetstream", "kafka"]
-        for message_size in ["100b", "1kb", "4kb", "8kb"]:
-        # for message_size in ["100b"]:
+        # broker_list = ["jetstream", "kafka"]
+        broker_list = ["kafka"]
+        # broker_list = ["jetstream"]
+        print("Test Cluster !!! Broker List: "+", ".join(broker_list))
+        # for message_size in ["100b", "1kb", "4kb", "8kb"]:
+        for message_size in ["16kb", "32kb", "64kb"]:
             for broker in broker_list:
                 template_file = os.path.join("templates", f"template_{broker}_cl.yml")
                 pub_conf_list = glob.glob(os.path.join(
@@ -109,9 +116,11 @@ if __name__ == '__main__':
                     test_jetstream_cl(broker, template_file, pub_conf_list, sub_conf_list, message_size, res_suffix)
 
     else:
-        broker_list = ["kafka", "jetstream", "nats"]
-        # broker_list = ["kafka"]
-        for message_size in ["100b", "1kb", "4kb", "8kb", "16kb"]:
+        # broker_list = ["kafka", "jetstream", "nats"]
+        broker_list = ["kafka"]
+        print("Test Single !!! Broker List:"+",".join(broker_list))
+        # for message_size in ["100b", "1kb", "4kb", "8kb", "16kb"]:
+        for message_size in ["16kb"]:
             for broker in broker_list:
                 template_file = os.path.join("templates", f"template_{broker}.yml")
                 pub_conf_list = glob.glob(os.path.join(
