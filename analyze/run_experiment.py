@@ -89,16 +89,16 @@ def test_nats(broker, template_file, pub_conf_list, message_size, res_suffix):
 
 
 if __name__ == '__main__':
-    isCluster = False
-    res_suffix = ''
-    # isCluster = True
-    # res_suffix = '_cl_3'
+    # isCluster = False
+    # res_suffix = ''
+    isCluster = True
+    res_suffix = '_cl_3'
     # isFault = True
     # res_suffix = '_cl_3_fault'
 
     if isCluster:
         # broker_list = ["jetstream", "kafka"]
-        broker_list = ["kafka"]
+        broker_list = ["jetstream"]
         # broker_list = ["jetstream"]
         print("Test Cluster !!! Broker List: "+", ".join(broker_list))
         # for message_size in ["100b", "1kb", "4kb", "8kb"]:

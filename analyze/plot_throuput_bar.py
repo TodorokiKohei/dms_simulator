@@ -88,7 +88,10 @@ def plot_bar_for_each(root_dir, throughput_map, mode):
 
 
 def plot_bar_from_key_latency(root_dir, latency_map, mode, match_keys, **kwargs):
-    fig, ax = plt.subplots()
+    if 'figsize' in kwargs.keys():
+        fig, ax = plt.subplots(figsize=kwargs['figsize'])
+    else:
+        fig, ax = plt.subplots()
     if match_keys == []:
         match_keys = latency_map.keys()
     width = 0.4
@@ -145,14 +148,21 @@ def plot_bar_from_key_latency(root_dir, latency_map, mode, match_keys, **kwargs)
     if ('yscale' in kwargs.keys()):
         ax.set_yscale(kwargs['yscale'])
 
+    if ('ylim' in kwargs.keys()):
+        ax.set_ylim(kwargs['ylim'])
+
     ax.legend()
     fig.savefig(os.path.join(
         root_dir, f'{mode}_{"_".join(match_keys)}_msg.png'), bbox_inches='tight')
 
 
 def plot_bar_from_key(root_dir, throughput_map, mode, match_keys, res_lower_limit, **kwargs):
-    fig_msg, ax_msg = plt.subplots()
-    fig_byte, ax_byte = plt.subplots()
+    if 'figsize' in kwargs.keys():
+        fig_msg, ax_msg = plt.subplots(figsize=kwargs['figsize'])
+        fig_byte, ax_byte = plt.subplots(figsize=kwargs['figsize'])
+    else:
+        fig_msg, ax_msg = plt.subplots()
+        fig_byte, ax_byte = plt.subplots()
     if match_keys == []:
         match_keys = throughput_map.keys()
     width = 0.4
@@ -218,6 +228,9 @@ def plot_bar_from_key(root_dir, throughput_map, mode, match_keys, res_lower_limi
 
     if ('msg_yscale' in kwargs.keys()):
         ax_msg.set_yscale(kwargs['msg_yscale'])
+    
+    if ('msg_ylim' in kwargs.keys()):
+        ax_msg.set_ylim(kwargs['msg_ylim'])
 
     ax_msg.legend()
     fig_msg.savefig(os.path.join(
@@ -244,6 +257,10 @@ def plot_bar_from_key(root_dir, throughput_map, mode, match_keys, res_lower_limi
 
     if ('byte_yscale' in kwargs.keys()):
         ax_byte.set_yscale(kwargs['byte_yscale'])
+
+    if ('byte_ylim' in kwargs.keys()):
+        ax_byte.set_ylim(kwargs['byte_ylim'])
+
     ax_byte.legend()
     fig_byte.savefig(os.path.join(
         root_dir, f'{mode}_{"_".join(match_keys)}_byte.png'), bbox_inches='tight')
@@ -263,7 +280,8 @@ def plot_single(res_lower_limit):
         root_dir, "**/*publisher*throughput*"))
     # plot_bar_for_each(root_dir, pub_throughput_map, "publish")
     plot_bar_from_key(root_dir, pub_throughput_map, "publish", ['kafka-acks-0', 'kafka-acks-1', 'nats', 'jetstream'], res_lower_limit,
-                      title="1台構成でのPublisherのスループット", msg_yscale='log', byte_yscale='log')
+                      title="1台構成でのPublisherのスループット", msg_yscale='log')
+                    #    , msg_yscale='log', byte_yscale='log')
 
     # Subscriberのスループット
     sub_throughput_map = collect_throughput(
@@ -272,7 +290,8 @@ def plot_single(res_lower_limit):
         root_dir, "**/*subscriber*throughput*"))
     # plot_bar_for_each(root_dir, sub_throughput_map, "subscribe")
     plot_bar_from_key(root_dir, sub_throughput_map, "subscribe", ['kafka-acks-0', 'kafka-acks-1', 'nats', 'jetstream'], res_lower_limit,
-                      title="1台構成でのSubscriberのスループット", msg_yscale='log', byte_yscale='log')
+                      title="1台構成でのSubscriberのスループット", msg_yscale='log')
+                    #    , msg_yscale='log', byte_yscale='log')
 
     # PublisherとSubscriberのスループット比較
     for broker, pub_throughput in pub_throughput_map.items():
@@ -345,6 +364,8 @@ def plot_cluster(res_lower_limit):
     # plot_bar_for_each(root_dir, sub_throughput_map, "subscribe")
     # plot_bar_from_key(root_dir, sub_throughput_map, "subscribe", ["kafka-acks-0-cl-3", "kafka-acks-1-cl-3", "jetstream-cl-3"])
 
+    throughput_all_map = {}
+    xticks_labels = []
     for broker, _ in pub_throughput_map.items():
         broker_info = broker.split('-')
         if len(broker_info) != 1 and broker_info[-2] == 'cl':
@@ -353,16 +374,42 @@ def plot_cluster(res_lower_limit):
         throughput_map['pub-'+broker] = pub_throughput_map[broker]
         throughput_map['pub-'+broker +
                        '-cl-3'] = pub_throughput_map[broker+'-cl-3']
-        throughput_map['sub-'+broker] = sub_throughput_map[broker]
-        throughput_map['sub-'+broker +
-                       '-cl-3'] = pub_throughput_map[broker+'-cl-3']
-        print(throughput_map.keys())
+        # throughput_map['sub-'+broker] = sub_throughput_map[broker]
+        # throughput_map['sub-'+broker +
+        #                '-cl-3'] = pub_throughput_map[broker+'-cl-3']
+
+        xticks_labels.extend([broker+'\nsingle', broker+'\nreplication'])
+        throughput_all_map['pub-'+broker] = pub_throughput_map[broker]
+        throughput_all_map['pub-'+broker+'-cl-3'] = pub_throughput_map[broker+'-cl-3']
+        # if 'jetstream' in broker_info:
+        #     dummy = []
+        #     for _ in range(10):
+        #         dummy.append([0, 1, 0])
+        #     dummy = np.array(dummy)
+        #     throughput_all_map['pub-'+broker]['16kb'] = dummy
+        #     throughput_all_map['pub-'+broker]['32kb'] = dummy
+        #     throughput_all_map['pub-'+broker]['64kb'] = dummy
+        #     throughput_all_map['pub-'+broker+'-cl-3']['16kb'] = dummy
+        #     throughput_all_map['pub-'+broker+'-cl-3']['32kb'] = dummy
+        #     throughput_all_map['pub-'+broker+'-cl-3']['64kb'] = dummy
+        
         plot_bar_from_key(root_dir, throughput_map, 'pub-sub', throughput_map.keys(), res_lower_limit,
                           title=broker+': 1台構成とレプリケーション構成', 
-                          xtickslabels=['pub-single', 'pub-replication', 'sub-single', 'sub-replication'], 
-                          msg_yscale='log', 
-                          byte_yscale='log')
+                        #   xtickslabels=['pub-single', 'pub-replication', 'sub-single', 'sub-replication'], 
+                          xtickslabels=['pub-single', 'pub-replication'], msg_yscale='log')
+                        #   msg_yscale='log', 
+                        #   byte_yscale='log')
 
+    plot_bar_from_key(root_dir, throughput_all_map, 'pub-sub', throughput_all_map.keys(), res_lower_limit,
+                          title='1台構成とレプリケーション構成でのPublisherスループット比較', 
+                          xtickslabels=xticks_labels,
+                          msg_yscale='log',
+                          msg_ylim=[10, 4*10**5],
+                          figsize=(9, 4.8))
+
+    latency_all_map = {}
+    match_keys = []
+    xticks_labels = []
     for broker, _ in pub_throughput_map.items():
         broker_info = broker.split('-')
         if len(broker_info) != 1 and broker_info[-2] == 'cl':
@@ -370,19 +417,22 @@ def plot_cluster(res_lower_limit):
 
         latency_map = {}
         if broker_info[0] == 'kafka' and broker_info[2] == '1':
-            match_keys = ['kafka-acks-1', 'kafka-acks-1-cl-3']
+            xticks_labels.extend(["kafka-acks-1\nsingle", "kafka-acks-1\nreplication"])
+            match_keys.extend(['kafka-acks-1', 'kafka-acks-1-cl-3'])
             df_dict = collect_latency(
                 root_dir, "**acks_1/*kafka-subscriber-?-?.csv")
             df_dict.update(collect_latency(
                 root_dir, "**acks_1_cl_3/*kafka-subscriber-?-?.csv"))
         elif broker_info[0] == 'kafka' and broker_info[2] == 'all':
-            match_keys = ['kafka-acks-all', 'kafka-acks-all-cl-3']
+            xticks_labels.extend(["kafka-acks-all\nsingle", "kafka-acks-all\nreplication"])
+            match_keys.extend(['kafka-acks-all', 'kafka-acks-all-cl-3'])
             df_dict = collect_latency(
                 root_dir, "**acks_all/*kafka-subscriber-?-?.csv")
             df_dict.update(collect_latency(
                 root_dir, "**acks_all_cl_3/*kafka-subscriber-?-?.csv"))
         elif broker_info[0] == 'jetstream':
-            match_keys = ['jetstream', 'jetstream-cl-3']
+            xticks_labels.extend(["jetstream\nsingle", "jetstream\nreplication"])
+            match_keys.extend(['jetstream', 'jetstream-cl-3'])
             df_dict = collect_latency(
                 root_dir, "**b/*jetstream-subscriber-pull-?.csv")
             df_dict.update(collect_latency(
@@ -395,8 +445,49 @@ def plot_cluster(res_lower_limit):
                     df.loc[:, 'receivedTime'] - df.loc[:, 'sentTime']).values
             latency_map[key] = latency
 
-        plot_bar_from_key_latency(root_dir, latency_map, "latency", match_keys,
-                                  title=broker+": レプリケーション構成でのレイテンシー", yscale='log', xtickslabels=['latency-single', 'latency-replication'])
+        latency_all_map.update(latency_map)
+    plot_bar_from_key_latency(root_dir, latency_all_map, "latency", match_keys,
+                                title="1台構成とレプリケーション構成でのレイテンシー比較", 
+                                yscale='log', 
+                                xtickslabels=xticks_labels,
+                                figsize=(9, 4.8),
+                                ylim=[10, 8*10**4])
+    
+
+    # for broker, _ in pub_throughput_map.items():
+    #     broker_info = broker.split('-')
+    #     if len(broker_info) != 1 and broker_info[-2] == 'cl':
+    #         continue
+
+    #     latency_map = {}
+    #     if broker_info[0] == 'kafka' and broker_info[2] == '1':
+    #         match_keys = ['kafka-acks-1', 'kafka-acks-1-cl-3']
+    #         df_dict = collect_latency(
+    #             root_dir, "**acks_1/*kafka-subscriber-?-?.csv")
+    #         df_dict.update(collect_latency(
+    #             root_dir, "**acks_1_cl_3/*kafka-subscriber-?-?.csv"))
+    #     elif broker_info[0] == 'kafka' and broker_info[2] == 'all':
+    #         match_keys = ['kafka-acks-all', 'kafka-acks-all-cl-3']
+    #         df_dict = collect_latency(
+    #             root_dir, "**acks_all/*kafka-subscriber-?-?.csv")
+    #         df_dict.update(collect_latency(
+    #             root_dir, "**acks_all_cl_3/*kafka-subscriber-?-?.csv"))
+    #     elif broker_info[0] == 'jetstream':
+    #         match_keys = ['jetstream', 'jetstream-cl-3']
+    #         df_dict = collect_latency(
+    #             root_dir, "**b/*jetstream-subscriber-pull-?.csv")
+    #         df_dict.update(collect_latency(
+    #             root_dir, "**cl_3/*jetstream-subscriber-pull-?.csv"))
+
+    #     for key, msg_map in df_dict.items():
+    #         latency = {}
+    #         for msg_size, df in msg_map.items():
+    #             latency[msg_size] = (
+    #                 df.loc[:, 'receivedTime'] - df.loc[:, 'sentTime']).values
+    #         latency_map[key] = latency
+
+    #     plot_bar_from_key_latency(root_dir, latency_map, "latency", match_keys,
+    #                               title=broker+": レプリケーション構成でのレイテンシー", yscale='log', xtickslabels=['latency-single', 'latency-replication'])
 
 
 def plot_tool_and_notool():
