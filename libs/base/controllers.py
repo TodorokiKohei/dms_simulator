@@ -9,7 +9,7 @@ import schedule
 from libs import utils
 from libs.base.containers import Container
 from libs.base.executers import Executer
-from libs.pumba import PumbaNetemContainer, TcContainer
+from libs.pumba import PumbaCrashContainer, PumbaNetemContainer, TcContainer
 from libs.utils import NodeManager
 from schedule import Scheduler
 
@@ -230,13 +230,14 @@ class Controller(AbstrctController):
                 configs = copy.deepcopy(action_configs)
                 if action_configs['mode'] in ['delay', 'loss', 'rate']:
                     self._actions.append(PumbaNetemContainer(action_name, configs, tgt))
-                    self._tc_containers.append(TcContainer())
+                elif action_configs['mode'] in ['kill', 'pause', 'stop', 'rm']:
+                    self._actions.append(PumbaCrashContainer(action_name, configs, tgt))
                 else:
                     raise NotImplementedError(
                         f'{action_configs["mode"]} is not implemented')
 
     def set_up_actions(self):
-        for action_container, tc_container in zip(self._actions, self._tc_containers):
+        for action_container in self._actions:
             # ターゲットのコンテナと同じノード、同じネットワークになるよう設定
             target_container = self._search_container(
                 action_container.target_container)
@@ -244,8 +245,11 @@ class Controller(AbstrctController):
             action_container.networks = target_container.networks
             self._set_container_node(action_container)
 
-            tc_container.node_name = target_container.node_name
-            self._set_container_node(tc_container)
+            if action_container.is_netem():
+                tc_container = TcContainer()
+                self._tc_containers.append(tc_container)
+                tc_container.node_name = target_container.node_name
+                self._set_container_node(tc_container)
 
             # ログを保存するローカルのディレクトリを作成
             self._set_and_create_container_home_dir(action_container)
