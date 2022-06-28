@@ -1,6 +1,7 @@
 import copy
 import os
 import shutil
+from threading import Thread
 from typing import List
 from abc import ABCMeta, abstractclassmethod
 from datetime import datetime
@@ -300,20 +301,11 @@ class Controller(AbstrctController):
             self._set_and_create_container_home_dir(container)
 
     def initialize(self):
-        # コンテナのボリュームを作成
-        # for container in self._containers:
-        #     container.create_volume_dir()
-
         # executerの初期化処理
         self._executre.create_remote_dir(self._containers, self._node_manager)
         self._executre.create_cluster(self._containers, self._node_manager)
-        # self._executre.pull_container_image(
-        #     self._containers, self._node_manager)
 
     def clean(self):
-        # コンテナのボリュームを削除
-        # for container in self._containers:
-        #     container.delete_volume_dir()
         # executerの掃除処理
         self._executre.delete_cluster(self._containers, self._node_manager)
 
@@ -321,9 +313,20 @@ class Controller(AbstrctController):
         # brokerコンテナを展開
         print('------------Deploy broker containers------------')
         print(f"create {self.__class__.BROKER_SERVICE}")
+        # for container in self._broker:
+        #     container.create_volume_dir()
+        # self._executre.pull_container_image(self._broker, self._node_manager)
+        # self._executre.up_containers(
+            # self._broker, self._node_manager, self.__class__.BROKER_SERVICE)
+
+        thread_list = []
         for container in self._broker:
-            container.create_volume_dir()
-        self._executre.pull_container_image(self._broker, self._node_manager)
+            th = Thread(target=self._executre.pre_deploy_process, args=(container, self._node_manager,))
+            th.start()
+            thread_list.append(th)
+        for th in thread_list:
+            th.join()
+
         self._executre.up_containers(
             self._broker, self._node_manager, self.__class__.BROKER_SERVICE)
 

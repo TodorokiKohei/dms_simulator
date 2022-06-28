@@ -97,3 +97,14 @@ class Executer(AbstractExecuter):
             if container.image in images_and_tags or container.image in images:
                 continue
             container.node.ssh_exec(f"docker pull {container.image}")
+
+    def pre_deploy_process(self, container:Container, node_manager: NodeManager) -> None:
+        # ディレクトリ作成
+        container.create_volume_dir()
+
+        # コンテナのPull処理
+        images_and_tags, _ = container.node.ssh_exec("docker image ls --format {{.Repository}}:{{.Tag}}")
+        images = [image_and_tag.split(":")[0] for image_and_tag in images_and_tags]
+        if container.image in images_and_tags or container.image in images:
+            return
+        container.node.ssh_exec(f"docker pull {container.image}")
