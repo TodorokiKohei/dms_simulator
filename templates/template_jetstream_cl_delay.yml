@@ -21,7 +21,7 @@ base:
 
 systems:
   type: jetstream
-  duration: 120s
+  duration: 140s
   broker:
     jetstream:
       jetstream-1:
@@ -54,7 +54,7 @@ actions:
   delay1:
     target_containers:
       - jetstream-1
-    start: 30s
+    start: 27s
     duration: 20s
     destination:
       - jetstream-2
