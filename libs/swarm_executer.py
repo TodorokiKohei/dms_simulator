@@ -46,7 +46,8 @@ class SwarmExecuter(Executer):
         # ネットワークの作成
         networks = self._get_container_network(containers)
         for network in networks:
-            manager.ssh_exec(f'docker network create -d overlay --opt com.docker.network.driver.mtu=9000 {network}')
+            # manager.ssh_exec(f'docker network create -d overlay --opt com.docker.network.driver.mtu=9000 {network}')
+            manager.ssh_exec(f'docker network create -d overlay {network}')
 
     def delete_cluster(self, containers: list, node_manager: NodeManager):
         manager = node_manager.get_manager()
