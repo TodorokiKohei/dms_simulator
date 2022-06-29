@@ -334,9 +334,13 @@ class Controller(AbstrctController):
         # publisherコンテナを展開
         print('------------Deploy publisher containers------------')
         print(f"create {self.__class__.PUBLISHER_SERVICE}")
+        thread_list = []
         for container in self._publisher:
-            container.create_volume_dir()
-        self._executre.pull_container_image(self._publisher, self._node_manager)
+            th = Thread(target=self._executre.pre_deploy_process, args=(container, self._node_manager,))
+            th.start()
+            thread_list.append(th)
+        for th in thread_list:
+            th.join()
         self._executre.up_containers(
             self._publisher, self._node_manager, self.__class__.PUBLISHER_SERVICE)
 
@@ -344,9 +348,13 @@ class Controller(AbstrctController):
         # subscriberコンテナを展開
         print('------------Deploy subscriber containers------------')
         print(f"create {self.__class__.SUBSCRIBER_SERVICE}")
+        thread_list = []
         for container in self._subscriber:
-            container.create_volume_dir()
-        self._executre.pull_container_image(self._subscriber, self._node_manager)
+            th = Thread(target=self._executre.pre_deploy_process, args=(container, self._node_manager,))
+            th.start()
+            thread_list.append(th)
+        for th in thread_list:
+            th.join()
         self._executre.up_containers(
             self._subscriber, self._node_manager, self.__class__.SUBSCRIBER_SERVICE)
 

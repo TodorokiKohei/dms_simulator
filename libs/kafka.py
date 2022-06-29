@@ -139,8 +139,8 @@ class KafkaController(Controller):
     def create_topics(self):
         # クラスターの同期時間
         sec = len(self._broker) * 3
-        time.sleep(sec)  
         print(f"Waiting for cluster synchronization.({sec} sec)")
+        time.sleep(sec)  
         for container in self._broker:
             if isinstance(container, KafkaContainer):
                 kafka = container

@@ -157,8 +157,8 @@ class JetStreamController(Controller):
 
     def create_topics(self):
         sec = len(self._broker) * 3
-        time.sleep(sec)  
         print(f"Waiting for cluster synchronization.({sec} sec)")
+        time.sleep(sec)  
         command = self._natsbox.build_command_to_create_stream()
         self._executre.exec_command_in_container(self._natsbox, command)
 
