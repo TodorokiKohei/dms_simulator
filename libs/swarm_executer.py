@@ -1,4 +1,5 @@
 import os
+from threading import Thread
 from typing import List
 
 import yaml
@@ -60,10 +61,18 @@ class SwarmExecuter(Executer):
         manager.ssh_exec('docker swarm leave -f')
 
     def up_containers(self, containers: list, node_manager: NodeManager, service: str):
+        # コンテナ展開前の処理を実行
+        thread_list = []
+        for container in containers:
+            th = Thread(target=container.pre_up_process)
+            th.start()
+            thread_list.append(th)
+        for th in thread_list:
+            th.join()
+
         # swarmで展開するためのcompose-fileの内容を作成
         swarm = {}
         for container in containers:
-            container.pre_up_process()
             swarm.update(container.to_swarm())
         compose = {
             'version': '3.8',

@@ -6,7 +6,8 @@ from libs.base.containers import Container
 
 class ClientContainer(Container):
     def __init__(self, name, configs: dict):
-        configs['image'] = 'todoroki182814/measurement-client'
+        if ('image' not in configs.keys()):
+            configs['image'] = 'todoroki182814/measurement-client'
         configs['volumes'] = [
             {
                 'type': 'bind',

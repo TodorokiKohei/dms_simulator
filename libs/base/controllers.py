@@ -375,8 +375,14 @@ class Controller(AbstrctController):
         print(f"remove {self.__class__.BROKER_SERVICE}")
         self._executre.down_containers(
             self._broker, self._node_manager, self.__class__.BROKER_SERVICE)
+
+        thread_list = []
         for container in self._broker:
-            container.delete_volume_dir()
+            th = Thread(target=container.delete_volume_dir)
+            th.start()
+            thread_list.append(th)
+        for th in thread_list:
+            th.join()
 
     def remove_publisher(self):
         # publisherの削除を行う

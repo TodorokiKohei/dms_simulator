@@ -1,0 +1,34 @@
+
+base:
+  user: todoroki
+  keyfile: $KEYFILE
+  sudopass: $SUDOPASS
+  nodes:
+    publisher-1:
+      address: 10.20.22.160
+    subscriber-1:
+      address: 10.20.22.159
+    broker-1:
+      address: 10.20.22.161
+    manager:
+      address: 10.20.22.164
+      is_manager: true
+
+
+systems:
+  type: nats
+  duration: 30s
+  broker:
+    nats:
+      nats-1:
+          node_name: "broker-1"
+          command: "-c /tmp/configs/core.conf"
+  publisher:
+    nats-pub-1:
+      image: todoroki182814/measurement-client-arm
+      node_name: 'publisher-1'
+      command: '-d nats -c ./configs/natsconf.yaml'
+  subscriber:
+    nats-sub-1:
+      node_name: 'subscriber-1'
+      command: '-d nats -c ./configs/natsconf.yaml'
