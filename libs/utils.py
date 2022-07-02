@@ -5,25 +5,31 @@ import pprint
 
 import paramiko
 
-lock = threading.Lock()
-
+common_lock = threading.Lock()
 
 def connect(func):
     """
     ssh接続を確立してからコマンドを実行する関数
     """
-
     def exec(self, *args, **kwargs):
         client = paramiko.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        with self._condtion:
+            if self._connect_host_num > 8:
+                self._condtion.wait()
+            self._connect_host_num += 1
         client.connect(self.address, username=self.user,
                        key_filename=self.keyfile, timeout=5)
         kwargs['client'] = client
         res, err = func(self, *args, **kwargs)
         client.close()
+        with self._condtion:
+            self._connect_host_num -= 1
+            self._condtion.notify()
+
         res = [s.rstrip() for s in res]
         err = [s.rstrip() for s in err]
-        with lock:
+        with common_lock:
             if res != []:
                 pprint.pprint(res, width=160)
             if err != []:
@@ -41,7 +47,11 @@ class Node:
         self.sudopass = sudopass
         self.address = address
         self.is_manager = is_manager
-        self._hostname = None
+        self._condtion = threading.Condition()
+        self._connect_host_num = 0
+
+        res, _ = self.ssh_exec('hostname')
+        self._hostname = res[0].replace('\n', '')
 
     @property
     def hostname(self):
