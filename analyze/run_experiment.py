@@ -31,11 +31,14 @@ def create_fault_test_template(broker, template_file, leader, delay):
     template['actions']['delay1']['params']['time'] = delay
     template['actions']['delay1']['target_containers'] = []
     template['actions']['delay1']['destination'] = []
+    cnt = 0
     for i in range(1, 4):
         if str(i) == leader:
             template['actions']['delay1']['target_containers'].append(f"{broker}-{i}")
         else:
-            template['actions']['delay1']['destination'].append(f"{broker}-{i}")
+            cnt += 1
+            if cnt == 1:
+                template['actions']['delay1']['destination'].append(f"{broker}-{i}")
     test_template_file = os.path.join(os.path.dirname(template_file), 'test_'+os.path.basename(template_file))
     with open(os.path.join('../', test_template_file), mode='w') as f:
         yaml.safe_dump(template, f, sort_keys=False)
@@ -170,9 +173,9 @@ if __name__ == '__main__':
     res_suffix = '_cl_3_fault'
 
     if isCluster and isFault:
-        # broker_list = ["kafka", "jetstream"]
-        broker_list = ["jetstream"]
-        delay = 10
+        broker_list = ["kafka", "jetstream"]
+        # broker_list = ["jetstream"]
+        delay = 20
         message_size = '4kb'
         print("Test Cluster and Fault!!! Broker List: "+", ".join(broker_list))
         for broker in broker_list:

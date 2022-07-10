@@ -433,7 +433,14 @@ def plot_cluster(res_lower_limit):
         # throughput_map['sub-'+broker +
         #                '-cl-3'] = pub_throughput_map[broker+'-cl-3']
 
-        xticks_labels.extend([broker+'\nsingle', broker+'\nreplication'])
+        
+        if broker == 'kafka-acks-1':
+            xticks_labels.extend(['Kafka(ACK=1)'+'\nスタンドアロン', 'Kafka(ACK=1)'+'\nクラスター'])
+        elif broker == 'kafka-acks-all':
+            xticks_labels.extend(['Kafka(ACK=all)'+'\nスタンドアロン', 'Kafka(ACK=all)'+'\nクラスター'])
+        elif broker == 'jetstream':
+            xticks_labels.extend(['JetStream'+'\nスタンドアロン', 'JetStream'+'\nクラスター'])
+        # xticks_labels.extend([broker+'\nsingle', broker+'\nreplication'])
         throughput_all_map['pub-'+broker] = pub_throughput_map[broker]
         throughput_all_map['pub-'+broker+'-cl-3'] = pub_throughput_map[broker+'-cl-3']
         # if 'jetstream' in broker_info:
@@ -693,7 +700,8 @@ def eval_results(root_dir, pub_throughput, sub_throughput, latency, pumba_log, b
 
 def plot_fault_injection():
     # root_dir = "results/2022_0615_0335_fault_injection_10mb_3mb_10msec"
-    root_dir = "results/2022_0615_0805_fault_injection_10mb_3mb_10msec"
+    # root_dir = "results/2022_0615_0805_fault_injection_10mb_3mb_10msec"
+    root_dir = "results/2022_0710_2050_fault_injection_10mb_3mb_20msec"
 
     dir_list = glob(root_dir+'/*')
     dir_list = sorted(dir_list)
