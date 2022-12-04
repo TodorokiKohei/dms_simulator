@@ -81,7 +81,7 @@ Ubuntu 20.04
     ```
 
 * クライアントの設定ファイルを配置する  
-`examples/clients_configs`を参照。クライアントは[measurement_client]("https://github.com/TodorokiKohei/measurement_client")を利用する。
+`examples/clients_configs`を参照。クライアントは[measurement_client](https://github.com/TodorokiKohei/measurement_client)を利用する。
     ```
     exec_dir
      | - controller
