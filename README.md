@@ -1,6 +1,12 @@
 # dms_simulator
 分散メッセージングシステムの障害検証を行うためのツール。
 
+# 対応しているメッセージングシステム
+* Kafka v6.2.4
+* NATS v2.8
+  * Core
+  * JetStream
+
 # 実行環境
 ## OS
 Ubuntu 20.04
