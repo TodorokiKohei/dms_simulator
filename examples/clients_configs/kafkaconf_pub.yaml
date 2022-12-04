@@ -1,0 +1,11 @@
+execTime: 120
+publisherRiseTime: 10
+subscriberFallTime: 10
+pubConf:
+  number: 1
+  messageSize: 1kb
+  pubAsync: true
+  topicName: test-topic
+  properties:
+    bootstrap.servers: kafka-1:9092
+    acks: "1"

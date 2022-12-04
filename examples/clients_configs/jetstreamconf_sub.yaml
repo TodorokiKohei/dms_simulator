@@ -1,0 +1,13 @@
+execTime: 130
+publisherRiseTime: 10
+subscriberFallTime: 10
+subConf:
+  number: 1
+  recordMessage: true
+  server: nats://jetstream-3
+  stream: STREAM
+  subject: STREAM.pull
+  durable: pull-consumer
+  mode: pull
+  batchSize: 150
+  maxWait: 50

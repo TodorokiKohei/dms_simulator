@@ -1,0 +1,11 @@
+execTime: 130
+publisherRiseTime: 10
+subscriberFallTime: 10
+pubConf:
+  number: 1
+  messageSize: 4kb
+  messageRate: 10mb
+  pubAsync: true
+  server: nats://jetstream-3
+  stream: STREAM
+  subject: STREAM.pull

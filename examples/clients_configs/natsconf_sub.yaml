@@ -1,0 +1,11 @@
+execTime: 60
+publisherRiseTime: 10
+subscriberFallTime: 10
+
+subConf:
+  number: 1
+  recordMessage: true
+  server: "nats://nats-1"
+  subject: "test-subject"
+  maxWait: 50
+  queueGroup: "queue-group"

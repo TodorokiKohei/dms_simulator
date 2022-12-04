@@ -1,0 +1,8 @@
+execTime: 60
+publisherRiseTime: 10
+subscriberFallTime: 10
+pubConf:
+  number: 1
+  messageSize: 100b
+  server: nats://nats-1
+  subject: test-subject
