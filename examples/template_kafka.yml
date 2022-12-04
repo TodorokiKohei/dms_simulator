@@ -120,14 +120,14 @@ actions:
       time: 100
       jitter: 0
 
-  # loss1:
-  #   target_containers:
-  #     - kafka-2
-  #   start: 30s
-  #   duration: 40s
-  #   destination:
-  #     - kafka-1
-  #     - kafka-3
-  #   mode: loss
-  #   params:
-  #     percent: 1
+  loss1:
+    target_containers:
+      - kafka-2
+    start: 30s
+    duration: 40s
+    destination:
+      - kafka-1
+      - kafka-3
+    mode: loss
+    params:
+      percent: 1

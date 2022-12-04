@@ -10,10 +10,10 @@ base:
       address: 10.20.22.159
     broker-1:
       address: 10.20.22.161
-    # broker-2:
-    #   address: 10.20.22.162
-    # broker-3:
-    #   address: 10.20.22.163
+    broker-2:
+      address: 10.20.22.162
+    broker-3:
+      address: 10.20.22.163
     manager:
       address: 10.20.22.164
       is_manager: true
